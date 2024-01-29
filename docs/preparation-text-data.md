@@ -1,6 +1,8 @@
 # Preparation (Text Data Processing)
 
-(Last updated: Mar 6, 2023)[^credit]
+(Last updated: Jan 29, 2024)[^credit]
+
+[^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).
 
 This part will prepare you with the background knowledge that we will use for this module.
 You will install some useful Python packages for Natural Language Processing (NLP) and Machine Learning (ML).
@@ -44,7 +46,7 @@ pip install gensim
 Finally, install PyTorch using the selector on [their website](https://pytorch.org/get-started/locally/).
 Use the stable version, choose your current operating system, package manager (`conda` or `pip`), and programming language (Python).
 If you have an NVIDIA GPU and are considering some more (heavy) ML work for other projects or your thesis, it might be worth taking some hours to look into using CUDA as a computing platform.
-However, for this module, just using the CPU suffices. 
+However, for this module, just using the CPU suffices.
 
 ## Task 2: Explore WebVectors
 
@@ -57,5 +59,3 @@ Browse around the website and answer the following questions:
 - Using the **Similar Words** page: What are some semantic associates for the proper noun "Amsterdam" in the English Wikipedia model? Do other models yield different results?
 - Using the **Calculator** page: If "scientist" is related to "science", "artist" is related to what? Were you able to find some other nice combinations that did or did not work?
 - Take a look at the **Models** page: Which types of preprocessing were used before training the models?
-
-[^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten    ) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).

@@ -1,8 +1,10 @@
 # Text Data Processing
 
-(Last updated: Mar 6, 2023)[^credit]
+(Last updated: Jan 29, 2024)[^credit]
 
-This module is about processing text data and has the following learning goals:
+[^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).
+
+All the content in this repository is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). This module is about processing text data and has the following learning goals:
 
 - **Goal 1**: Apply the methods of text processing to large amounts of text data.
 - **Goal 2**: Preprocess text data, including tokenization, part-of-speech tagging, stemming/lemmatization, and stopword removal.
@@ -13,5 +15,3 @@ This module is about processing text data and has the following learning goals:
 
 ```{tableofcontents}
 ```
-
-[^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).

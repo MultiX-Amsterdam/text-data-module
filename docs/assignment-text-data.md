@@ -1,6 +1,8 @@
 # Assignment (Text Data Processing)
 
-(Last updated: Mar 6, 2023)
+(Last updated: Jan 29, 2024)[^credit]
+
+[^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).
 
 ## Materials
 

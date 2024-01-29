@@ -1,0 +1,14 @@
+jupyter-book
+matplotlib
+numpy
+ipython3
+pandas
+plotly
+scikit-learn
+seaborn
+pytz
+torch
+nltk
+gensim
+tqdm
+xml
