@@ -1,7 +1,6 @@
 jupyter-book
 matplotlib
 numpy
-ipython3
 pandas
 scikit-learn
 seaborn
@@ -9,4 +8,7 @@ torch
 nltk
 gensim
 tqdm
-xml
+# xml
+matplotlib
+nltk
+spacy
