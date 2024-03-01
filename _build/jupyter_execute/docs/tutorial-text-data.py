@@ -34,6 +34,10 @@
 
 # ## Import Packages
 
+# :::{important}
+# To make this notebook work, you need to [install PyTorch](https://pytorch.org/get-started/locally/). You can also copy this notebook (as well as the dataset) to Google Colab and run the notebook on it. You also need to install the packages [in this link](https://github.com/MultiX-Amsterdam/text-data-module/blob/main/install_packages.sh) in your Python development environment.
+# :::
+# 
 # We put all the packages that are needed for this tutorial below:
 
 # In[1]:
@@ -150,7 +154,7 @@ def answer_tokenize_and_lemmatize(df):
     df["tokens"] = df["tokens"].progress_apply(
         lambda tokens: [lemmatizer.lemmatize(token, wordnet_pos(tag)) for token, tag in nltk.pos_tag(tokens)]
     )
-    
+
     return df
 
 
@@ -176,7 +180,7 @@ def answer_get_word_counts(df, token_col="tokens"):
     """
     # Copy the dataframe to avoid editing the original one.
     df = df.copy(deep=True)
-    
+
     # We need to filter out non-words.
     # Notice that the token column contains an array of tokens (not just one token).
     df[token_col] = df[token_col].apply(lambda tokens: [token.lower() for token in tokens if token.isalpha()])
@@ -184,7 +188,7 @@ def answer_get_word_counts(df, token_col="tokens"):
     # Each item in the token column contains an array, which cannot be used directly.
     # Our goal is to count the tokens.
     # Thus, we need to explode the tokens so that every token gets its own row.
-    # Then, at the later step, we can group the tokens and count them. 
+    # Then, at the later step, we can group the tokens and count them.
     df = df.explode(token_col)
 
     # Option 1:
@@ -234,7 +238,7 @@ def answer_remove_stopwords(df):
 
 def answer_get_index_of_top_n_items(array, n=3):
     """
-    Given an NumPy array, return the indexes of the top "n" number of items according to their values. 
+    Given an NumPy array, return the indexes of the top "n" number of items according to their values.
 
     Parameters
     ----------
@@ -834,7 +838,7 @@ lda.components_.shape
 
 def get_index_of_top_n_items(array, n):
     """
-    Given an NumPy array, return the indexes of the top "n" number of items according to their values. 
+    Given an NumPy array, return the indexes of the top "n" number of items according to their values.
 
     Parameters
     ----------
@@ -883,7 +887,7 @@ check_answer_df(top_n_for_topic_0, answer_top_n_for_topic_0)
 def get_word_weights_for_topics(lda_model, vectorizer, n=100):
     """
     Get weights for words for each topic.
-    
+
     Parameters
     ----------
     lda_model : sklearn.decomposition.LatentDirichletAllocation
@@ -892,7 +896,7 @@ def get_word_weights_for_topics(lda_model, vectorizer, n=100):
         The count vectorizer.
     n : int
         Number of important words that we want to get.
-    
+
     Returns
     -------
     dict of pandas.DataFrame
@@ -901,7 +905,7 @@ def get_word_weights_for_topics(lda_model, vectorizer, n=100):
     words = vectorizer.get_feature_names_out()
     n = len(words) if n is None else n
     topic_word_weights = {}
-    
+
     for idx, topic_vector in enumerate(lda_model.components_):
         top_features_ind = answer_get_index_of_top_n_items(topic_vector, n=n)
         top_features = [words[i] for i in top_features_ind]
@@ -1043,7 +1047,7 @@ def add_padded_tensors(df1, df2):
     #    df["tensor"] = df["tokens"].apply(
     #        lambda tokens: np.vstack([w2v_model.wv[token] for token in tokens])
     #    )
-    
+
     # Add tensors (option 2: using the spaCy tensors).
     for df in [df1, df2]:
         df["tensor"] = df["doc"].apply(lambda doc: doc.tensor)
