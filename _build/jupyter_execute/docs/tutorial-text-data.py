@@ -481,6 +481,13 @@ check_answer_df(df_with_tokens, answer_df_with_tokens)
 # <a name="a3-2"></a>
 
 # ### Assignment for Task 3.2: Word Counts
+# 
+# To see what the most used words per class are, create a new, seperate dataframe with token counts.
+# - Hint: use the `pandas.Series.apply` and `str.isalpha()` functions to filter out non-alphabetical tokens.
+# - Hint: use the `pandas.DataFrame.explode` to create one row per class and token.
+# - Hint: use `pandas.DataFrame.groupby` with `.size()` afterwards or `pandas.DataFrame.pivot_table` with size as the `aggfunc` to obtain the occurences per class.
+# - Hint: use the `pandas.Series.reset_index` function to obtain a dataframe with [class, tokens, count] as the columns.
+# - Hint: use the `pandas.DataFrame.sort_values` function for sorting a dataframe.
 
 # In[16]:
 

@@ -1653,6 +1653,14 @@ Your output is:
 </section>
 <section id="assignment-for-task-3-2-word-counts">
 <h3>Assignment for Task 3.2: Word Counts<a class="headerlink" href="#assignment-for-task-3-2-word-counts" title="Permalink to this headline">#</a></h3>
+<p>To see what the most used words per class are, create a new, seperate dataframe with token counts.</p>
+<ul class="simple">
+<li><p>Hint: use the <code class="docutils literal notranslate"><span class="pre">pandas.Series.apply</span></code> and <code class="docutils literal notranslate"><span class="pre">str.isalpha()</span></code> functions to filter out non-alphabetical tokens.</p></li>
+<li><p>Hint: use the <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame.explode</span></code> to create one row per class and token.</p></li>
+<li><p>Hint: use <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame.groupby</span></code> with <code class="docutils literal notranslate"><span class="pre">.size()</span></code> afterwards or <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame.pivot_table</span></code> with size as the <code class="docutils literal notranslate"><span class="pre">aggfunc</span></code> to obtain the occurences per class.</p></li>
+<li><p>Hint: use the <code class="docutils literal notranslate"><span class="pre">pandas.Series.reset_index</span></code> function to obtain a dataframe with [class, tokens, count] as the columns.</p></li>
+<li><p>Hint: use the <code class="docutils literal notranslate"><span class="pre">pandas.DataFrame.sort_values</span></code> function for sorting a dataframe.</p></li>
+</ul>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_word_counts</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">token_col</span><span class="o">=</span><span class="s2">&quot;tokens&quot;</span><span class="p">):</span>
