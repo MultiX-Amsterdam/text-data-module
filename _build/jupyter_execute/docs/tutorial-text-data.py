@@ -883,7 +883,7 @@ answer_top_n_for_A
 B = lda.components_[0]
 top_n_for_topic_0 = get_index_of_top_n_items(B, n=10)
 answer_top_n_for_topic_0 = answer_get_index_of_top_n_items(B, n=10)
-check_answer_df(top_n_for_topic_0, answer_top_n_for_topic_0)
+check_answer_np(top_n_for_topic_0, answer_top_n_for_topic_0)
 
 
 # We can now use the function that we just implemented in the following function to help us get the weights for the top `n` words for each topic.
