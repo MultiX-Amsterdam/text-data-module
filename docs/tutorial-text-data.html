@@ -3484,7 +3484,7 @@ iteration: 10 of max_iter: 10
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">B</span> <span class="o">=</span> <span class="n">lda</span><span class="o">.</span><span class="n">components_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">top_n_for_topic_0</span> <span class="o">=</span> <span class="n">get_index_of_top_n_items</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
 <span class="n">answer_top_n_for_topic_0</span> <span class="o">=</span> <span class="n">answer_get_index_of_top_n_items</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="n">check_answer_df</span><span class="p">(</span><span class="n">top_n_for_topic_0</span><span class="p">,</span> <span class="n">answer_top_n_for_topic_0</span><span class="p">)</span>
+<span class="n">check_answer_np</span><span class="p">(</span><span class="n">top_n_for_topic_0</span><span class="p">,</span> <span class="n">answer_top_n_for_topic_0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
