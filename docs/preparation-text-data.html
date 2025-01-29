@@ -51,9 +51,11 @@ const thebe_selector_input = "pre"
 const thebe_selector_output = ".output, .cell_output"
 </script>
     <script async="async" src="../_static/sphinx-thebe.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://unpkg.com/@jupyter-widgets/html-manager@^0.20.1/dist/embed-amd.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Tutorial ((Text Data Processing))" href="tutorial-text-data.html" />
+    <link rel="next" title="Tutorial (Text Data Processing)" href="tutorial-text-data.html" />
     <link rel="prev" title="Text Data Processing" href="overview-text-data.html" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="docsearch:language" content="None">
@@ -123,6 +125,16 @@ const thebe_selector_output = ".output, .cell_output"
  <li class="toctree-l1">
   <a class="reference internal" href="assignment-text-data.html">
    Assignment
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="answer.html">
+   Task Answers
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="util.html">
+   Utility Functions
   </a>
  </li>
 </ul>
@@ -353,22 +365,18 @@ title="Print to PDF"
                 
   <section class="tex2jax_ignore mathjax_ignore" id="preparation-text-data-processing">
 <h1>Preparation (Text Data Processing)<a class="headerlink" href="#preparation-text-data-processing" title="Permalink to this headline">#</a></h1>
-<p>(Last updated: Jan 29, 2024)<a class="footnote-reference brackets" href="#credit" id="id1">1</a></p>
+<p>(Last updated: Jan 29, 2025)<a class="footnote-reference brackets" href="#credit" id="id1">1</a></p>
 <p>This part will prepare you with the background knowledge that we will use for this module.
 You will install some useful Python packages for Natural Language Processing (NLP) and Machine Learning (ML).
 You will explore some small applications to get a grasp of word embeddings.</p>
 <section id="task-1-check-your-installations">
 <h2>Task 1: Check your installations<a class="headerlink" href="#task-1-check-your-installations" title="Permalink to this headline">#</a></h2>
 <p>In this module, we will use some Python packages that require extra downloads.
-We will use NLTK (Natural Language Toolkit) and spaCy for NLP and PyTorch for ML.</p>
-<p>First, for NLTK and spaCy, install both through the package manager of your choice using one of the following commands in your terminal:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>conda install nltk spacy
+We will use NLTK (Natural Language Toolkit) and spaCy for NLP tasks and PyTorch for deep learning.</p>
+<p>First, to install packages, run the following command in your terminal. Or you can manually install the packages in <a class="reference external" href="https://github.com/MultiX-Amsterdam/text-data-module/blob/main/install_packages.sh">this link</a>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>sh install_packages.sh
 </pre></div>
 </div>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install nltk spacy
-</pre></div>
-</div>
-<p>You might already have one of these installed.</p>
 <p>Then, download the additional data for NLTK. Open a Python interpreter or notebook and run the following code:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nltk</span>
 <span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;averaged_perceptron_tagger&#39;</span><span class="p">)</span>
@@ -376,14 +384,12 @@ We will use NLTK (Natural Language Toolkit) and spaCy for NLP and PyTorch for ML
 <span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;punkt&#39;</span><span class="p">)</span>
 <span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;stopwords&#39;</span><span class="p">)</span>
 <span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;wordnet&#39;</span><span class="p">)</span>
+<span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;punkt_tab&#39;</span><span class="p">)</span>
+<span class="n">nltk</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="s1">&#39;averaged_perceptron_tagger_eng&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Download the spaCy model we will use by using the following command in your terminal:</p>
+<p>Next, download the spaCy model that we will use by using the following command in your terminal:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python -m spacy download en_core_web_sm
-</pre></div>
-</div>
-<p>Install the gensim package by using the following command in your terminal:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip install gensim
 </pre></div>
 </div>
 <p>Finally, install PyTorch using the selector on <a class="reference external" href="https://pytorch.org/get-started/locally/">their website</a>.
@@ -449,7 +455,7 @@ Browse around the website and answer the following questions:</p>
     <a class='right-next' id="next-link" href="tutorial-text-data.html" title="next page">
     <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Tutorial ((Text Data Processing))</p>
+        <p class="prev-next-title">Tutorial (Text Data Processing)</p>
     </div>
     <i class="fas fa-angle-right"></i>
     </a>
