@@ -1,6 +1,6 @@
 # Preparation (Text Data Processing)
 
-(Last updated: Jan 29, 2024)[^credit]
+(Last updated: Jan 29, 2025)[^credit]
 
 [^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).
 
@@ -11,19 +11,14 @@ You will explore some small applications to get a grasp of word embeddings.
 ## Task 1: Check your installations
 
 In this module, we will use some Python packages that require extra downloads.
-We will use NLTK (Natural Language Toolkit) and spaCy for NLP and PyTorch for ML.
+We will use NLTK (Natural Language Toolkit) and spaCy for NLP tasks and PyTorch for deep learning.
 
-First, for NLTK and spaCy, install both through the package manager of your choice using one of the following commands in your terminal:
+First, to install packages, run the following command in your terminal. Or you can manually install the packages in [this link](https://github.com/MultiX-Amsterdam/text-data-module/blob/main/install_packages.sh).
 ```sh
-conda install nltk spacy
+sh install_packages.sh
 ```
-```sh
-pip install nltk spacy
-```
-You might already have one of these installed.
 
 Then, download the additional data for NLTK. Open a Python interpreter or notebook and run the following code:
-
 ```python
 import nltk
 nltk.download('averaged_perceptron_tagger')
@@ -31,16 +26,13 @@ nltk.download('omw-1.4')
 nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger_eng')
 ```
 
-Download the spaCy model we will use by using the following command in your terminal:
+Next, download the spaCy model that we will use by using the following command in your terminal:
 ```sh
 python -m spacy download en_core_web_sm
-```
-
-Install the gensim package by using the following command in your terminal:
-```sh
-pip install gensim
 ```
 
 Finally, install PyTorch using the selector on [their website](https://pytorch.org/get-started/locally/).

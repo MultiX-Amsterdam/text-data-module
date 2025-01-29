@@ -3,7 +3,7 @@
 
 # # Tutorial (Text Data Processing)
 
-# (Last updated: Feb 27, 2024)[^credit]
+# (Last updated: Jan 29, 2025)[^credit]
 # 
 # [^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) and revised by [Alejandro Monroy](https://github.com/amonroym99) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).
 
@@ -35,7 +35,7 @@
 # ## Import Packages
 
 # :::{important}
-# To make this notebook work, you need to [install PyTorch](https://pytorch.org/get-started/locally/). You can also copy this notebook (as well as the dataset) to Google Colab and run the notebook on it. You also need to install the packages [in this link](https://github.com/MultiX-Amsterdam/text-data-module/blob/main/install_packages.sh) in your Python development environment.
+# To make this notebook work, you need to install the packages by following the instructions in the [preparation](./preparation-text-data.md) step. You can also copy this notebook (as well as the dataset) to Google Colab and run the notebook on it.
 # :::
 # 
 # We put all the packages that are needed for this tutorial below:
@@ -43,217 +43,82 @@
 # In[1]:
 
 
-import os
-import matplotlib.pyplot as plt
 import nltk
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
+
 import spacy
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
 from gensim.models import Word2Vec
 
-from nltk.corpus import stopwords, wordnet
-from nltk.stem import SnowballStemmer, WordNetLemmatizer
+from nltk.corpus import (
+    stopwords,
+    wordnet
+)
+from nltk.stem import (
+    SnowballStemmer,
+    WordNetLemmatizer
+)
 from nltk.tokenize import word_tokenize
 
 from sklearn.cluster import KMeans
 from sklearn.decomposition import LatentDirichletAllocation
 from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics import adjusted_mutual_info_score, adjusted_rand_score, confusion_matrix
+from sklearn.metrics import (
+    adjusted_mutual_info_score,
+    adjusted_rand_score,
+    confusion_matrix
+)
 
 from tqdm.notebook import tqdm
 
 from wordcloud import WordCloud
 
-from xml.sax import saxutils as su
+# Import the answers for the tasks
+from util.answer import (
+    answer_tokenize_and_lemmatize,
+    answer_get_word_counts,
+    answer_remove_stopwords,
+    answer_get_index_of_top_n_items
+)
+
+# Import the utility functions that are provided
+from util.util import (
+    check_answer_df,
+    check_answer_np,
+    wordnet_pos,
+    reformat_data,
+    visualize_word_counts,
+    add_spacy_doc,
+    add_spacy_tokens,
+    add_padded_tensors
+)
 
 # Add tqdm functions to pandas.
 tqdm.pandas()
 
 
+# <a name="answer"></a>
+
 # ## Task Answers
 
-# The code block below contains answers for the assignments in this tutorial. **Do not check the answers in the next cell before practicing the tasks.**
+# Click on one of the following links to check answers for the assignments in this tutorial. **Do not check the answers before practicing the tasks.**
+# - [Click this for task answers if you open this notebook on your local machine](util/answer.py)
+# - {any}`Click this for task answers if you view this notebook on a web browser <./answer>`
 
-# In[2]:
+# <a name="util"></a>
 
+# ## Utility File
 
-def check_answer_df(df_result, df_answer, n=1):
-    """
-    This function checks if two output dataframes are the same.
-
-    Parameters
-    ----------
-    df_result : pandas.DataFrame
-        The result from the output of a function.
-    df_answer: pandas.DataFrame
-        The expected output of the function.
-    n : int
-        The numbering of the test case.
-    """
-    try:
-        assert df_answer.equals(df_result)
-        print(f"Test case {n} passed.")
-    except Exception:
-        print(f"Test case {n} failed.")
-        print("Your output is:")
-        display(df_result)
-        print("Expected output is:")
-        display(df_answer)
-
-
-def check_answer_np(arr_result, arr_answer, n=1):
-    """
-    This function checks if two output numpy arrays are the same.
-
-    Parameters
-    ----------
-    arr_result : numpy.ndarray
-        The result from the output of a function.
-    arr_answer: numpy.ndarray
-        The expected output of the function.
-    n : int
-        The numbering of the test case.
-    """
-    try:
-        assert np.array_equal(arr_result, arr_answer)
-        print(f"Test case {n} passed.")
-    except Exception:
-        print(f"Test case {n} failed.")
-        print("Your output is:")
-        print(arr_result)
-        print("Expected output is:")
-        print(arr_answer)
-
-
-def answer_tokenize_and_lemmatize(df):
-    """
-    Tokenize and lemmatize the text in the dataset.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The dataframe containing at least the "text" column.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The dataframe with the added "tokens" column.
-    """
-    # Copy the dataframe to avoid editing the original one.
-    df = df.copy(deep=True)
-
-    # Apply the tokenizer to create the tokens column.
-    df["tokens"] = df["text"].progress_apply(word_tokenize)
-
-    # Apply the lemmatizer on every word in the tokens list.
-    df["tokens"] = df["tokens"].progress_apply(
-        lambda tokens: [lemmatizer.lemmatize(token, wordnet_pos(tag)) for token, tag in nltk.pos_tag(tokens)]
-    )
-
-    return df
-
-
-def answer_get_word_counts(df, token_col="tokens"):
-    """
-    Generate dataframes with the word counts for each class in the data.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The dataframe containing at least the "class" and "tokens" columns.
-    token_col: str
-        Name of the column that stores the tokens.
-
-    Returns
-    -------
-    pandas.DataFrame:
-        There should be three columns in this dataframe.
-        The "class" column shows the document class.
-        The "tokens" column means tokens in the document class.
-        The "count" column means the number of appearances of each token in the class.
-        The dataframe should be sorted by the "class" and "count" columns.
-    """
-    # Copy the dataframe to avoid editing the original one.
-    df = df.copy(deep=True)
-
-    # We need to filter out non-words.
-    # Notice that the token column contains an array of tokens (not just one token).
-    df[token_col] = df[token_col].apply(lambda tokens: [token.lower() for token in tokens if token.isalpha()])
-
-    # Each item in the token column contains an array, which cannot be used directly.
-    # Our goal is to count the tokens.
-    # Thus, we need to explode the tokens so that every token gets its own row.
-    # Then, at the later step, we can group the tokens and count them.
-    df = df.explode(token_col)
-
-    # Option 1:
-    # - First, perform the groupby function on class and token.
-    # - Then, get the size of how many rows per token (i.e., token counts).
-    # - Finally, add the counts as a new column.
-    counts = df.groupby(["class", token_col]).size().reset_index(name="count")
-
-    # Option 2 has a similar logic but uses the pivot_table function.
-    # counts = counts.pivot_table(index=["class", "tokens"], aggfunc="size").reset_index(name="count")
-
-    # Sort the values on the class and count.
-    counts = counts.sort_values(["class", "count"], ascending=[True, False])
-
-    return counts
-
-
-def answer_remove_stopwords(df):
-    """
-    Remove stopwords from the tokens.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        There should be three columns in this dataframe.
-        The "class" column shows the document class.
-        The "tokens" column means tokens in the document class.
-        The "count" column means the number of appearances of each token in the class.
-        The dataframe should be sorted by the "class" and "count" columns.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The dataframe with the stopwords rows removed.
-    """
-    # Copy the dataframe to avoid editing the original one.
-    df = df.copy(deep=True)
-
-    # Using a set for quicker lookups.
-    stopwords_set = set(stopwords_list)
-
-    # Filter stopwords from tokens.
-    df = df[~df["tokens"].isin(stopwords_set)]
-
-    return df
-
-
-def answer_get_index_of_top_n_items(array, n=3):
-    """
-    Given an NumPy array, return the indexes of the top "n" number of items according to their values.
-
-    Parameters
-    ----------
-    array : numpy.ndarray
-        A 1D NumPy array.
-    n : int
-        The top "n" number of items that we want.
-
-    Returns
-    -------
-    numpy.ndarray
-        The indexes of the top "n" items.
-    """
-    return array.argsort()[:-n-1:-1]
-
+# Click on one of the following links to check the provided functions in the utility file for this tutorial.
+# - [Click this for utility functions if you open this notebook on your local machine](util/util.py)
+# - {any}`Click this for utility functions if you view this notebook on a web browser <./util>`
 
 # <a name="t3"></a>
 
@@ -261,7 +126,7 @@ def answer_get_index_of_top_n_items(array, n=3):
 
 # In this task, we will preprocess the text data from the AG News Dataset. First, we need to load the files.
 
-# In[3]:
+# In[2]:
 
 
 df_train = pd.read_csv("train.csv")
@@ -270,14 +135,14 @@ df_test = pd.read_csv("test.csv")
 
 # For performance reasons, we will only use a small subset of this dataset.
 
-# In[4]:
+# In[3]:
 
 
 df_train = df_train.groupby("Class Index").head(1000)
 df_test = df_test.groupby("Class Index").head(100)
 
 
-# In[5]:
+# In[4]:
 
 
 display(df_train, df_test)
@@ -285,47 +150,15 @@ display(df_train, df_test)
 
 # As you can see, all the classes are distributed evenly in the train and test data.
 
-# In[6]:
+# In[5]:
 
 
 display(df_train["Class Index"].value_counts(), df_test["Class Index"].value_counts())
 
 
-# To make the data more understandable, we will make the classes more understandable by adding a `class` column from the original `Class Index` column, containing the category of the news article. To process both the title and news text together, we will combine the `Title` and `Description` columns into one `text` column. We will deal with just the train data until the point where we need the test data again.
+# To make the data more understandable, we will make the classes more understandable by adding a `class` column from the original `Class Index` column, containing the category of the news article. To process both the title and news text together, we will combine the `Title` and `Description` columns into one `text` column. We will deal with just the train data until the point where we need the test data again. We provide the `reformat_data` function in the [utility file](#util) for this.
 
-# In[7]:
-
-
-def reformat_data(df):
-    """
-    Reformat the Class Index column to a Class column and combine
-    the Title and Description columns into a Text column.
-    Select only the class_idx, class and text columns afterwards.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The original dataframe.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The reformatted dataframe.
-    """
-    # Make the class column using a dictionary.
-    df = df.rename(columns={"Class Index": "class_idx"})
-    classes = {1: "World", 2: "Sports", 3: "Business", 4: "Sci/Tech"}
-    df["class"] = df["class_idx"].apply(classes.get)
-
-    # Use string concatonation for the Text column and unescape html characters.
-    df["text"] = (df["Title"] + " " + df["Description"]).apply(su.unescape)
-
-    # Select only the class_idx, class, and text column.
-    df = df[["class_idx", "class", "text"]]
-    return df
-
-
-# In[8]:
+# In[6]:
 
 
 df_train_reformat = reformat_data(df_train)
@@ -342,7 +175,7 @@ display(df_train_reformat)
 # 
 # To illustrate the use of tokenization, let's consider the following example, which tokenizes a sample text using the `word_tokenize` function from the NLTK package. That function uses a pre-trained tokenization model for English.
 
-# In[9]:
+# In[7]:
 
 
 # Sample text.
@@ -362,7 +195,7 @@ print("Tokenized text:", tokens)
 
 # Part-of-speech (POS) tagging is the process of assigning each word in a text corpus with a specific part-of-speech tag based on its context and definition. The tags typically include nouns, verbs, adjectives, adverbs, pronouns, prepositions, conjunctions, interjections, and more. POS tagging can help other NLP tasks disambiguate a token somewhat due to the added context.
 
-# In[10]:
+# In[8]:
 
 
 pos_tags = nltk.pos_tag(tokens)
@@ -377,28 +210,16 @@ print(pos_tags)
 # 
 # Stemming is a technique that involves reducing words to their base or stem form by removing any affixes or suffixes. For example, the stem of the word "lazily" would be "lazi". Stemming is a simple and fast technique that can be useful. However, it can also produce inaccurate or incorrect results since it does not consider the context or part of speech of the word.
 # 
-# Lemmatization, on the other hand, is a more sophisticated technique that involves identifying the base or dictionary form of a word, also known as the lemma. Unlike stemming, lemmatization can consider the part of speech of the word, which can make it more accurate and reliable. With lemmatization, the lemma of the word "lazily" would be "lazy". Lemmatization can be slower and more complex than stemming but provides a higher level of normalization.
+# Lemmatization, on the other hand, is a more sophisticated technique that involves identifying the base or dictionary form of a word, also known as the lemma. Unlike stemming, lemmatization can consider the part of speech (POS) of the word, which can make it more accurate and reliable. With lemmatization, the lemma of the word "lazily" would be "lazy". Lemmatization can be slower and more complex than stemming but provides a higher level of normalization.
+# 
+# Also, lemmatization requires POS tagging. Since the POS tagging logic in the `nltk` package is different from the `wordnet` package, we provide a function `wordnet_pos` in the [utility file](#util) for converting the POS tags. The input of the `wordnet_pos` function is a `nltk` POS tag, and the output of the function is a `wordnet` POS tag.
 
-# In[11]:
+# In[9]:
 
 
 # Initialize the stemmer and lemmatizer.
 stemmer = SnowballStemmer("english")
 lemmatizer = WordNetLemmatizer()
-
-
-def wordnet_pos(nltk_pos):
-    """
-    Function to map POS tags to wordnet tags for lemmatizer.
-    """
-    if nltk_pos.startswith("V"):
-        return wordnet.VERB
-    elif nltk_pos.startswith("J"):
-        return wordnet.ADJ
-    elif nltk_pos.startswith("R"):
-        return wordnet.ADV
-    return wordnet.NOUN
-
 
 # Perform stemming and lemmatization seperately on the tokens.
 stemmed_tokens = [stemmer.stem(token) for token in tokens]
@@ -418,7 +239,7 @@ print("Lemmatized text:", lemmatized_tokens)
 # 
 # The purpose of stopword removal in NLP is to improve the accuracy and efficiency of text analysis and processing by reducing the noise and complexity of the data. Stopwords are often used to form grammatical structures in a sentence, but they do not carry much meaning or relevance to the main topic or theme of the text. So by removing these words, we can reduce the dimensionality of the text data, improve the performance of machine learning models, and speed up the processing of text data. NLTK has a predefined list of stopwords for English.
 
-# In[12]:
+# In[10]:
 
 
 # English stopwords in NLTK.
@@ -436,7 +257,7 @@ print(stopwords_list)
 #     - Hint: use the `nltk.stem.WordNetLemmatizer.lemmatize` function to lemmatize a token. Use the `wordnet_pos` function to obtain the POS tag for the lemmatizer. 
 # - Tokenizing and lemmatizing the entire dataset can take a while too. Use `tqdm` and the `pandas.Series.progress_apply` to show progress bars for the operations.
 
-# In[13]:
+# In[11]:
 
 
 def tokenize_and_lemmatize(df):
@@ -461,7 +282,7 @@ def tokenize_and_lemmatize(df):
 
 # Our goal is to have a dataframe that looks like the following. **For simplicity, we only show the top 5 most frequent words.** Your data frame should have more rows.
 
-# In[14]:
+# In[12]:
 
 
 # This part of code will take some time to run.
@@ -471,7 +292,7 @@ answer_df_with_tokens.groupby("class").head(n=5)
 
 # The code below tests if the output of your function matches the expected output.
 
-# In[15]:
+# In[13]:
 
 
 df_with_tokens = tokenize_and_lemmatize(df_train_reformat)
@@ -489,7 +310,7 @@ check_answer_df(df_with_tokens, answer_df_with_tokens)
 # - Hint: use the `pandas.Series.reset_index` function to obtain a dataframe with [class, tokens, count] as the columns.
 # - Hint: use the `pandas.DataFrame.sort_values` function for sorting a dataframe.
 
-# In[16]:
+# In[14]:
 
 
 def get_word_counts(df, token_col="tokens"):
@@ -500,12 +321,12 @@ def get_word_counts(df, token_col="tokens"):
     ----------
     df : pandas.DataFrame
         The dataframe containing at least the "class" and "tokens" columns.
-    token_col: str
+    token_col : str
         Name of the column that stores the tokens.
 
     Returns
     -------
-    pandas.DataFrame:
+    pandas.DataFrame
         There should be three columns in this dataframe.
         The "class" column shows the document class.
         The "tokens" column means tokens in the document class.
@@ -520,7 +341,7 @@ def get_word_counts(df, token_col="tokens"):
 
 # Our goal is to have a dictionary of dataframes (one per class) that look like the following. **For simplicity, we only show the top 5 most frequent words.** Your data frame should have more rows.
 
-# In[17]:
+# In[15]:
 
 
 answer_word_counts = answer_get_word_counts(answer_df_with_tokens, token_col="tokens")
@@ -529,50 +350,16 @@ answer_word_counts.groupby("class").head(n=5)
 
 # The code below tests if the output of your function matches the expected output.
 
-# In[18]:
+# In[16]:
 
 
 word_counts = get_word_counts(df_with_tokens, token_col="tokens")
 check_answer_df(answer_word_counts, word_counts)
 
 
-# In the following function, we use the [wordcloud](https://amueller.github.io/word_cloud/auto_examples/simple.html#sphx-glr-auto-examples-simple-py) package to visualize the word counts that you just computed.
+# We provide the `visualize_word_counts` function in the [utility file](#util) to visualize the word counts that you just computed using the [wordcloud](https://amueller.github.io/word_cloud/auto_examples/simple.html#sphx-glr-auto-examples-simple-py) package.
 
-# In[19]:
-
-
-def visualize_word_counts(df, class_col="class", token_col="tokens", count_col="count"):
-    """
-    Displays word clouds given a word counts dataframe.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The dataframe with three columns:
-        - The "class" column (each document class)
-        - The "tokens" column (showing tokens in each document class)
-        - The "count" column (showing counts for each token)
-    class_col : str
-        Name of the class column (if different from "class").
-    token_col : str
-        Name of the token column (if different from "tokens").
-    count_col : str
-        Name of the count column (if different from "count").
-    """
-    # Groupby the class column and loop through all of them
-    for name, df_group in df.groupby(class_col):
-        # Compute a dictionary with word frequencies
-        frequencies = dict(zip(df_group[token_col], df_group[count_col]))
-        # Generate word cloud from frequencies
-        wordcloud = WordCloud(background_color="white", width=1000, height=500, random_state=42).generate_from_frequencies(frequencies)
-        # Display image
-        plt.axis("off")
-        plt.title("Class: " + name)
-        plt.imshow(wordcloud)
-        plt.show()
-
-
-# In[20]:
+# In[17]:
 
 
 visualize_word_counts(answer_word_counts)
@@ -587,7 +374,7 @@ visualize_word_counts(answer_word_counts)
 #   - Hint: use the `pandas.DataFrame.isin` function.
 #   - Hint: use the `stopwords_list` variable to help you check if a token is a stop word.
 
-# In[21]:
+# In[18]:
 
 
 def remove_stopwords(df):
@@ -616,7 +403,7 @@ def remove_stopwords(df):
 
 # Our goal is to have a dictionary of dataframes (one per class) that look like the following. **For simplicity, we only show the top 5 most frequent words.** Your data frame should have more rows.
 
-# In[22]:
+# In[19]:
 
 
 answer_word_counts_no_stopword = answer_remove_stopwords(answer_word_counts)
@@ -625,14 +412,14 @@ answer_word_counts_no_stopword.groupby("class").head(n=5)
 
 # The code below tests if the output of your function matches the expected output.
 
-# In[23]:
+# In[20]:
 
 
 word_counts_no_stopword = remove_stopwords(word_counts)
 check_answer_df(word_counts_no_stopword, answer_word_counts_no_stopword)
 
 
-# In[24]:
+# In[21]:
 
 
 visualize_word_counts(answer_word_counts_no_stopword)
@@ -652,7 +439,7 @@ visualize_word_counts(answer_word_counts_no_stopword)
 # 
 # When a text is processed by spaCy, it is first passed to the `nlp` function, which uses the loaded model to tokenize the text and applies various linguistic annotations like part-of-speech tagging, named entity recognition, and dependency parsing in the background. The resulting annotations are stored in a `Doc` object, which can be accessed and manipulated using various methods and attributes.
 
-# In[25]:
+# In[22]:
 
 
 # Load the small English model in spaCy.
@@ -670,85 +457,25 @@ print(doc)
 
 # The `Doc` object can be iterated over to access each `Token` object in the document. We can also directly access multiple attributes of the `Token` objects. For example, we can directly access the lemma of the token with `Token.lemma_` and check if a token is a stop word with `Token.is_stop`. To make it easy to see them, we put them in a data frame.
 
-# In[26]:
+# In[23]:
 
 
 spacy_doc_attributes = [(token, token.lemma_, token.is_stop) for token in doc]
 pd.DataFrame(data=spacy_doc_attributes, columns=["token", "lemma", "is_stopword"])
 
 
-# The above example only deals with one sentence. Now we need to deal with all the sentences in all the classes. Below is a function to add a column with a `Doc` representation of the `text` column to the dataframe.
+# The above example only deals with one sentence. Now we need to deal with all the sentences in all the classes. We provide a `add_spacy_doc` function in the [utility file](#util) to add a column with a `Doc` representation of the `text` column to the dataframe. Now we can add the spaCy tokens using the above function. This step will take some time since it needs to process all the sentences. So we added a progress bar using the `tqdm` package.
 
-# In[27]:
-
-
-def add_spacy_doc(df):
-    """
-    Add a column with the spaCy Doc objects.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The dataframe containing at least the "text" column.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The dataframe with the added "doc" column.
-    """
-    # Copy the dataframe to avoid editing the original one.
-    df = df.copy(deep=True)
-
-    # Get the number of CPUs in the machine.
-    n_process = max(1, os.cpu_count()-2)
-
-    # Use multiple CPUs to speed up computing.
-    df["doc"] = [doc for doc in tqdm(nlp.pipe(df["text"], n_process=n_process), total=df.shape[0])]
-
-    return df
+# In[24]:
 
 
-# Now we can add the spaCy tokens using the above function. This step will take some time since it needs to process all the sentences. So we added a progress bar.
-
-# In[28]:
-
-
-df_with_nltk_tokens_and_spacy_doc = add_spacy_doc(answer_df_with_tokens)
+df_with_nltk_tokens_and_spacy_doc = add_spacy_doc(answer_df_with_tokens, nlp)
 display(df_with_nltk_tokens_and_spacy_doc)
 
 
-# The following function will add the spacy tokens to our original dataframe.
+# We also provide a `add_spacy_tokens` function in the [utility file](#util) to add the spacy tokens to our original dataframe. We can run the code below to add the spacy tokens.
 
-# In[29]:
-
-
-def add_spacy_tokens(df):
-    """
-    Add a column with a list of lemmatized tokens, without stopwords and numbers.
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        The dataframe containing at least the "doc" column.
-
-    Returns
-    -------
-    pandas.DataFrame
-        The dataframe with the "spacy_tokens" column.
-    """
-    # Copy the dataframe to avoid editing the original one.
-    df = df.copy(deep=True)
-
-    df["spacy_tokens"] = df["doc"].apply(
-        lambda tokens: [token.lemma_ for token in tokens if token.is_alpha and not token.is_stop]
-    )
-
-    return df
-
-
-# We can run the code below to add the spacy tokens.
-
-# In[30]:
+# In[25]:
 
 
 df_with_nltk_tokens_and_spacy_tokens = add_spacy_tokens(df_with_nltk_tokens_and_spacy_doc)
@@ -757,7 +484,7 @@ display(df_with_nltk_tokens_and_spacy_tokens)
 
 # Now we can use the function that we wrote before to get the word count from the spacy tokens.
 
-# In[31]:
+# In[26]:
 
 
 spacy_word_counts = answer_get_word_counts(df_with_nltk_tokens_and_spacy_tokens, token_col="spacy_tokens")
@@ -774,7 +501,7 @@ spacy_word_counts.groupby("class").head(n=5)
 # 
 # To use LDA, we need to represent the documents as a bag of words, where the order of the words is ignored and only the frequency of each word in the document is considered. This bag-of-words representation allows us to represent each document as a vector of word frequencies, which can be used as input to the LDA algorithm. Computing LDA might take a moment on our dataset size.
 
-# In[32]:
+# In[27]:
 
 
 # Convert preprocessed text to bag-of-words representation using CountVectorizer.
@@ -783,7 +510,7 @@ vectorizer = CountVectorizer(max_features=1000)
 
 # We will use the `fit_transform` function in the vectorizer. But in this case, we need a string that represents a sentence as the input. So, we can just join all the tokens together into one string. We also reset the index for consistency.
 
-# In[33]:
+# In[28]:
 
 
 df_strings = df_with_nltk_tokens_and_spacy_tokens["spacy_tokens"].apply(lambda x: " ".join(x))
@@ -793,7 +520,7 @@ df_strings
 
 # Then, we can use the `fit_transform` function to get the bag of words vector.
 
-# In[34]:
+# In[29]:
 
 
 X = vectorizer.fit_transform(df_strings.values)
@@ -801,7 +528,7 @@ X = vectorizer.fit_transform(df_strings.values)
 
 # We convert the original matrix to a data frame to make it easier to see the bag of words. The columns indicate tokens, and the values for each cell indicate the word counts. The number of columns in the data frame matches the `max_features` parameter in the `CountVectorizer`. The number of rows matches the size of the training data.
 
-# In[35]:
+# In[30]:
 
 
 pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names_out())
@@ -809,7 +536,7 @@ pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names_out())
 
 # Now we have the bag of words vector. We can use the vector for LDA topic modeling.
 
-# In[36]:
+# In[31]:
 
 
 # Define the number of topics to model with LDA.
@@ -823,7 +550,7 @@ f = lda.fit(X)
 
 # Now we can check the topic vectors in the LDA model. Each vector represents the topic in a high dimensional space. The high dimensional space is formed by using the word tokens. So, the vectors can also be viewed as weights that represents the number of importance that a word token was assigned to the topic. In the following code block, we print the shape of the vectors. The row size should match the number of topics that we set before. The column size should match the `max_features` parameter, which means the number of words.
 
-# In[37]:
+# In[32]:
 
 
 lda.components_.shape
@@ -840,7 +567,7 @@ lda.components_.shape
 #   - Hint: use the `numpy.argsort` function.
 # - Notice that the `numpy.argsort` function gives you the indexes from the array items with the lowest value, which is not what we want. You need to figure out a way to reverse a numpy array and select the top `n` items.
 
-# In[38]:
+# In[33]:
 
 
 def get_index_of_top_n_items(array, n):
@@ -867,7 +594,7 @@ def get_index_of_top_n_items(array, n):
 
 # The following code shows the example that we mentioned above.
 
-# In[39]:
+# In[34]:
 
 
 A = np.array([3,1,2,4,0])
@@ -877,7 +604,7 @@ answer_top_n_for_A
 
 # The code below tests if the output of your function matches the expected output.
 
-# In[40]:
+# In[35]:
 
 
 B = lda.components_[0]
@@ -888,7 +615,7 @@ check_answer_np(top_n_for_topic_0, answer_top_n_for_topic_0)
 
 # We can now use the function that we just implemented in the following function to help us get the weights for the top `n` words for each topic.
 
-# In[41]:
+# In[36]:
 
 
 def get_word_weights_for_topics(lda_model, vectorizer, n=100):
@@ -926,7 +653,7 @@ def get_word_weights_for_topics(lda_model, vectorizer, n=100):
 
 # Now we can take a look at the data first. For simplicity, we only print the first 10 important words for each topic.
 
-# In[42]:
+# In[37]:
 
 
 topic_word_weights = get_word_weights_for_topics(lda, vectorizer, n=100)
@@ -938,7 +665,7 @@ for k, v in topic_word_weights.items():
 
 # Then, we can use the word weights to create word clouds.
 
-# In[43]:
+# In[38]:
 
 
 # Generate a word cloud for each topic.
@@ -977,7 +704,7 @@ for topic_idx, words in topic_word_weights.items():
 # 
 # We can train a Word2Vec model ourselves, but keep in mind that later on, it's not nice if we don't have embeddings for certain words in the test set. So let's first apply the familiar preprocessing steps to the test set:
 
-# In[44]:
+# In[39]:
 
 
 # Reformat the test set.
@@ -987,14 +714,14 @@ df_test_reformat = reformat_data(df_test)
 df_test_with_tokens = answer_tokenize_and_lemmatize(df_test_reformat)
 
 # spaCy preprocessing.
-df_test_with_nltk_tokens_and_spacy_tokens = add_spacy_tokens(add_spacy_doc(df_test_with_tokens))
+df_test_with_nltk_tokens_and_spacy_tokens = add_spacy_tokens(add_spacy_doc(df_test_with_tokens, nlp))
 
 display(df_test_with_nltk_tokens_and_spacy_tokens)
 
 
 # To obtain the complete model, we combine the `tokens` column into one series and call the `Word2Vec` function.
 
-# In[45]:
+# In[40]:
 
 
 # Rename the very long variables
@@ -1010,7 +737,7 @@ w2v_model = Word2Vec(tokens_both.values, vector_size=40, min_count=1)
 
 # To obtain the embeddings, we can use the `Word2Vec.wv[word]` syntax. To get multiple vectors nicely next to each other in a 2D matrix, we can call `numpy.vstack`.
 
-# In[46]:
+# In[41]:
 
 
 print(np.vstack([w2v_model.wv[word] for word in ["rain", "cat", "dog"]]))
@@ -1018,61 +745,15 @@ print(np.vstack([w2v_model.wv[word] for word in ["rain", "cat", "dog"]]))
 
 # The spaCy model we used has a `Tok2Vec` algorithm in its pipeline, so we can directly access the 2D matrix of all word vectors on a document with the `Doc.tensor` attribute. Keep in mind this still contains the embeddings of the stopwords.
 
-# In[47]:
+# In[42]:
 
 
 print(doc.tensor)
 
 
-# To prepare the word embeddings for classification, we will add a `tensor` column to both the dataframes for training and testing. Each cell in the `tensor` column should be a tensor array, representing the word embedding vector for the text in the corresponding row. The tensors need to have the same size for both the training and test sets, so we also need to pad the tensors with smaller sizes by adding zeros at the end.
+# To prepare the word embeddings for classification, we will add a `tensor` column to both the dataframes for training and testing. Each cell in the `tensor` column should be a tensor array, representing the word embedding vector for the text in the corresponding row. The tensors need to have the same size for both the training and test sets, so we also need to pad the tensors with smaller sizes by adding zeros at the end. We provide a `add_padded_tensors` function in the [utility file](#util) for doing this.
 
-# In[48]:
-
-
-def add_padded_tensors(df1, df2):
-    """
-    Add a tensor column to the dataframes, with every tensor having the same dimensions.
-
-    Parameters
-    ----------
-    df1 : pandas.DataFrame
-        The first dataframe containing at least the "tokens" or "doc" column.
-    df2 : pandas.DataFrame
-        The second dataframe containing at least the "tokens" or "doc" column.
-
-    Returns
-    -------
-    tuple[pandas.DataFrame]
-        The dataframes with the added tensor column.
-    """
-    # Copy the dataframes to avoid editing the originals.
-    df1 = df1.copy(deep=True)
-    df2 = df2.copy(deep=True)
-
-    # Add tensors (option 1: using the Word2Vec model that we created).
-    #for df in [df1, df2]:
-    #    df["tensor"] = df["tokens"].apply(
-    #        lambda tokens: np.vstack([w2v_model.wv[token] for token in tokens])
-    #    )
-
-    # Add tensors (option 2: using the spaCy tensors).
-    for df in [df1, df2]:
-        df["tensor"] = df["doc"].apply(lambda doc: doc.tensor)
-
-    # Determine the largest amount of columns in both the training and test sets.
-    largest = max(df1["tensor"].apply(lambda x: x.shape[0]).max(),
-                  df2["tensor"].apply(lambda x: x.shape[0]).max())
-
-    # Pad the tensors with zeros so that they have equal size.
-    for df in [df1, df2]:
-        df["tensor"] = df["tensor"].apply(
-            lambda x: np.pad(x, ((0, largest - x.shape[0]), (0, 0)))
-        )
-
-    return df1, df2
-
-
-# In[49]:
+# In[43]:
 
 
 df_train_with_tensor, df_test_with_tensor = add_padded_tensors(df_train_preprocessd, df_test_preprocessd)
@@ -1087,7 +768,7 @@ display(df_test_with_tensor)
 # 
 # The following code demonstrates how to implement a neural network for topic classification in PyTorch. First let's do some more preparations for our inputs, turning them into PyTorch tensors.
 
-# In[50]:
+# In[44]:
 
 
 # Transform spaCy tensors into PyTorch tensors.
@@ -1105,7 +786,7 @@ train_target = train_target.scatter_(1, train_labels.unsqueeze(1), 1).unsqueeze(
 
 # Then, it is time to define our network. The neural net consists of three fully connected layers (`fc1`, `fc2`, and `fc3`) with ReLU activation (`relu`) in between each layer. We flatten the input tensor using `view` before passing it through the fully connected layers. Finally, we apply the softmax activation function (`softmax`) to the output tensor to obtain the predicted probabilities for each class.
 
-# In[51]:
+# In[45]:
 
 
 class TopicClassifier(nn.Module):
@@ -1141,7 +822,7 @@ class TopicClassifier(nn.Module):
 # Now it's time to train our network, this may take a while, but the current loss will be printed after every epoch.
 # If you want to run the code faster, you can also put this notebook on Google Colab and use its provided GPU to speed up computing.
 
-# In[52]:
+# In[46]:
 
 
 # Define parameters.
@@ -1172,7 +853,7 @@ for epoch in range(num_epochs):
 
 # The following code evaluates the model using a confusion matrix.
 
-# In[53]:
+# In[47]:
 
 
 # Evaluate the neural net on the test set.

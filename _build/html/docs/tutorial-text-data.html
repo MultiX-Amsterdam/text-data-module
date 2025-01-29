@@ -51,6 +51,8 @@ const thebe_selector_input = "pre"
 const thebe_selector_output = ".output, .cell_output"
 </script>
     <script async="async" src="../_static/sphinx-thebe.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="https://unpkg.com/@jupyter-widgets/html-manager@^0.20.1/dist/embed-amd.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Assignment (Text Data Processing)" href="assignment-text-data.html" />
@@ -123,6 +125,16 @@ const thebe_selector_output = ".output, .cell_output"
  <li class="toctree-l1">
   <a class="reference internal" href="assignment-text-data.html">
    Assignment
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="answer.html">
+   Task Answers
+  </a>
+ </li>
+ <li class="toctree-l1">
+  <a class="reference internal" href="util.html">
+   Utility Functions
   </a>
  </li>
 </ul>
@@ -347,6 +359,11 @@ title="Print to PDF"
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#utility-file">
+   Utility File
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#task-3-preprocess-text-data">
    Task 3: Preprocess Text Data
   </a>
@@ -462,6 +479,11 @@ title="Print to PDF"
   </a>
  </li>
  <li class="toc-h2 nav-item toc-entry">
+  <a class="reference internal nav-link" href="#utility-file">
+   Utility File
+  </a>
+ </li>
+ <li class="toc-h2 nav-item toc-entry">
   <a class="reference internal nav-link" href="#task-3-preprocess-text-data">
    Task 3: Preprocess Text Data
   </a>
@@ -554,7 +576,7 @@ title="Print to PDF"
                 
   <section class="tex2jax_ignore mathjax_ignore" id="tutorial-text-data-processing">
 <h1>Tutorial (Text Data Processing)<a class="headerlink" href="#tutorial-text-data-processing" title="Permalink to this headline">#</a></h1>
-<p>(Last updated: Feb 27, 2024)<a class="footnote-reference brackets" href="#credit" id="id1">1</a></p>
+<p>(Last updated: Jan 29, 2025)<a class="footnote-reference brackets" href="#credit" id="id1">1</a></p>
 <p>This tutorial will familiarize you with the data science pipeline of processing text data. We will go through the various steps involved in the Natural Language Processing (NLP) pipeline for topic modelling and topic classification, including tokenization, lemmatization, and obtaining word embeddings. We will also build a neural network using PyTorch for multi-class topic classification using the dataset.</p>
 <p>The AG’s News Topic Classification Dataset contains news articles from four different categories, making it a nice source of text data for NLP tasks. We will guide you through the process of understanding the dataset, implementing various NLP techniques, and building a model for classification.</p>
 <p>You can use the following links to jump to the tasks and assignments:</p>
@@ -592,38 +614,67 @@ title="Print to PDF"
 <h2>Import Packages<a class="headerlink" href="#import-packages" title="Permalink to this headline">#</a></h2>
 <div class="admonition important">
 <p class="admonition-title">Important</p>
-<p>To make this notebook work, you need to <a class="reference external" href="https://pytorch.org/get-started/locally/">install PyTorch</a>. You can also copy this notebook (as well as the dataset) to Google Colab and run the notebook on it. You also need to install the packages <a class="reference external" href="https://github.com/MultiX-Amsterdam/text-data-module/blob/main/install_packages.sh">in this link</a> in your Python development environment.</p>
+<p>To make this notebook work, you need to install the packages by following the instructions in the <a class="reference internal" href="preparation-text-data.html"><span class="doc std std-doc">preparation</span></a> step. You can also copy this notebook (as well as the dataset) to Google Colab and run the notebook on it.</p>
 </div>
 <p>We put all the packages that are needed for this tutorial below:</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">nltk</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
-<span class="kn">import</span> <span class="nn">nltk</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
 <span class="kn">import</span> <span class="nn">spacy</span>
+
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
 <span class="kn">import</span> <span class="nn">torch.optim</span> <span class="k">as</span> <span class="nn">optim</span>
 
 <span class="kn">from</span> <span class="nn">gensim.models</span> <span class="kn">import</span> <span class="n">Word2Vec</span>
 
-<span class="kn">from</span> <span class="nn">nltk.corpus</span> <span class="kn">import</span> <span class="n">stopwords</span><span class="p">,</span> <span class="n">wordnet</span>
-<span class="kn">from</span> <span class="nn">nltk.stem</span> <span class="kn">import</span> <span class="n">SnowballStemmer</span><span class="p">,</span> <span class="n">WordNetLemmatizer</span>
+<span class="kn">from</span> <span class="nn">nltk.corpus</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">stopwords</span><span class="p">,</span>
+    <span class="n">wordnet</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">nltk.stem</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">SnowballStemmer</span><span class="p">,</span>
+    <span class="n">WordNetLemmatizer</span>
+<span class="p">)</span>
 <span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">word_tokenize</span>
 
 <span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span>
 <span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">LatentDirichletAllocation</span>
 <span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">CountVectorizer</span>
-<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">adjusted_mutual_info_score</span><span class="p">,</span> <span class="n">adjusted_rand_score</span><span class="p">,</span> <span class="n">confusion_matrix</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">adjusted_mutual_info_score</span><span class="p">,</span>
+    <span class="n">adjusted_rand_score</span><span class="p">,</span>
+    <span class="n">confusion_matrix</span>
+<span class="p">)</span>
 
 <span class="kn">from</span> <span class="nn">tqdm.notebook</span> <span class="kn">import</span> <span class="n">tqdm</span>
 
 <span class="kn">from</span> <span class="nn">wordcloud</span> <span class="kn">import</span> <span class="n">WordCloud</span>
 
-<span class="kn">from</span> <span class="nn">xml.sax</span> <span class="kn">import</span> <span class="n">saxutils</span> <span class="k">as</span> <span class="n">su</span>
+<span class="c1"># Import the answers for the tasks</span>
+<span class="kn">from</span> <span class="nn">util.answer</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">answer_tokenize_and_lemmatize</span><span class="p">,</span>
+    <span class="n">answer_get_word_counts</span><span class="p">,</span>
+    <span class="n">answer_remove_stopwords</span><span class="p">,</span>
+    <span class="n">answer_get_index_of_top_n_items</span>
+<span class="p">)</span>
+
+<span class="c1"># Import the utility functions that are provided</span>
+<span class="kn">from</span> <span class="nn">util.util</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">check_answer_df</span><span class="p">,</span>
+    <span class="n">check_answer_np</span><span class="p">,</span>
+    <span class="n">wordnet_pos</span><span class="p">,</span>
+    <span class="n">reformat_data</span><span class="p">,</span>
+    <span class="n">visualize_word_counts</span><span class="p">,</span>
+    <span class="n">add_spacy_doc</span><span class="p">,</span>
+    <span class="n">add_spacy_tokens</span><span class="p">,</span>
+    <span class="n">add_padded_tensors</span>
+<span class="p">)</span>
 
 <span class="c1"># Add tqdm functions to pandas.</span>
 <span class="n">tqdm</span><span class="o">.</span><span class="n">pandas</span><span class="p">()</span>
@@ -631,187 +682,24 @@ title="Print to PDF"
 </div>
 </div>
 </div>
+<p><a name="answer"></a></p>
 </section>
 <section id="task-answers">
 <h2>Task Answers<a class="headerlink" href="#task-answers" title="Permalink to this headline">#</a></h2>
-<p>The code block below contains answers for the assignments in this tutorial. <strong>Do not check the answers in the next cell before practicing the tasks.</strong></p>
-<div class="cell tag_hide-cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">check_answer_df</span><span class="p">(</span><span class="n">df_result</span><span class="p">,</span> <span class="n">df_answer</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    This function checks if two output dataframes are the same.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df_result : pandas.DataFrame</span>
-<span class="sd">        The result from the output of a function.</span>
-<span class="sd">    df_answer: pandas.DataFrame</span>
-<span class="sd">        The expected output of the function.</span>
-<span class="sd">    n : int</span>
-<span class="sd">        The numbering of the test case.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">assert</span> <span class="n">df_answer</span><span class="o">.</span><span class="n">equals</span><span class="p">(</span><span class="n">df_result</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test case </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> passed.&quot;</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test case </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> failed.&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Your output is:&quot;</span><span class="p">)</span>
-        <span class="n">display</span><span class="p">(</span><span class="n">df_result</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Expected output is:&quot;</span><span class="p">)</span>
-        <span class="n">display</span><span class="p">(</span><span class="n">df_answer</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">check_answer_np</span><span class="p">(</span><span class="n">arr_result</span><span class="p">,</span> <span class="n">arr_answer</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    This function checks if two output numpy arrays are the same.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    arr_result : numpy.ndarray</span>
-<span class="sd">        The result from the output of a function.</span>
-<span class="sd">    arr_answer: numpy.ndarray</span>
-<span class="sd">        The expected output of the function.</span>
-<span class="sd">    n : int</span>
-<span class="sd">        The numbering of the test case.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">arr_result</span><span class="p">,</span> <span class="n">arr_answer</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test case </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> passed.&quot;</span><span class="p">)</span>
-    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Test case </span><span class="si">{</span><span class="n">n</span><span class="si">}</span><span class="s2"> failed.&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Your output is:&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">arr_result</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Expected output is:&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span><span class="n">arr_answer</span><span class="p">)</span>
-
-
-<span class="k">def</span> <span class="nf">answer_tokenize_and_lemmatize</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Tokenize and lemmatize the text in the dataset.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The dataframe containing at least the &quot;text&quot; column.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The dataframe with the added &quot;tokens&quot; column.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Copy the dataframe to avoid editing the original one.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># Apply the tokenizer to create the tokens column.</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">progress_apply</span><span class="p">(</span><span class="n">word_tokenize</span><span class="p">)</span>
-
-    <span class="c1"># Apply the lemmatizer on every word in the tokens list.</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">progress_apply</span><span class="p">(</span>
-        <span class="k">lambda</span> <span class="n">tokens</span><span class="p">:</span> <span class="p">[</span><span class="n">lemmatizer</span><span class="o">.</span><span class="n">lemmatize</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">wordnet_pos</span><span class="p">(</span><span class="n">tag</span><span class="p">))</span> <span class="k">for</span> <span class="n">token</span><span class="p">,</span> <span class="n">tag</span> <span class="ow">in</span> <span class="n">nltk</span><span class="o">.</span><span class="n">pos_tag</span><span class="p">(</span><span class="n">tokens</span><span class="p">)]</span>
-    <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">df</span>
-
-
-<span class="k">def</span> <span class="nf">answer_get_word_counts</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">token_col</span><span class="o">=</span><span class="s2">&quot;tokens&quot;</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Generate dataframes with the word counts for each class in the data.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The dataframe containing at least the &quot;class&quot; and &quot;tokens&quot; columns.</span>
-<span class="sd">    token_col: str</span>
-<span class="sd">        Name of the column that stores the tokens.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame:</span>
-<span class="sd">        There should be three columns in this dataframe.</span>
-<span class="sd">        The &quot;class&quot; column shows the document class.</span>
-<span class="sd">        The &quot;tokens&quot; column means tokens in the document class.</span>
-<span class="sd">        The &quot;count&quot; column means the number of appearances of each token in the class.</span>
-<span class="sd">        The dataframe should be sorted by the &quot;class&quot; and &quot;count&quot; columns.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Copy the dataframe to avoid editing the original one.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># We need to filter out non-words.</span>
-    <span class="c1"># Notice that the token column contains an array of tokens (not just one token).</span>
-    <span class="n">df</span><span class="p">[</span><span class="n">token_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">token_col</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">tokens</span><span class="p">:</span> <span class="p">[</span><span class="n">token</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span> <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">isalpha</span><span class="p">()])</span>
-
-    <span class="c1"># Each item in the token column contains an array, which cannot be used directly.</span>
-    <span class="c1"># Our goal is to count the tokens.</span>
-    <span class="c1"># Thus, we need to explode the tokens so that every token gets its own row.</span>
-    <span class="c1"># Then, at the later step, we can group the tokens and count them.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">explode</span><span class="p">(</span><span class="n">token_col</span><span class="p">)</span>
-
-    <span class="c1"># Option 1:</span>
-    <span class="c1"># - First, perform the groupby function on class and token.</span>
-    <span class="c1"># - Then, get the size of how many rows per token (i.e., token counts).</span>
-    <span class="c1"># - Finally, add the counts as a new column.</span>
-    <span class="n">counts</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">([</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="n">token_col</span><span class="p">])</span><span class="o">.</span><span class="n">size</span><span class="p">()</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">)</span>
-
-    <span class="c1"># Option 2 has a similar logic but uses the pivot_table function.</span>
-    <span class="c1"># counts = counts.pivot_table(index=[&quot;class&quot;, &quot;tokens&quot;], aggfunc=&quot;size&quot;).reset_index(name=&quot;count&quot;)</span>
-
-    <span class="c1"># Sort the values on the class and count.</span>
-    <span class="n">counts</span> <span class="o">=</span> <span class="n">counts</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="s2">&quot;count&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">])</span>
-
-    <span class="k">return</span> <span class="n">counts</span>
-
-
-<span class="k">def</span> <span class="nf">answer_remove_stopwords</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Remove stopwords from the tokens.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        There should be three columns in this dataframe.</span>
-<span class="sd">        The &quot;class&quot; column shows the document class.</span>
-<span class="sd">        The &quot;tokens&quot; column means tokens in the document class.</span>
-<span class="sd">        The &quot;count&quot; column means the number of appearances of each token in the class.</span>
-<span class="sd">        The dataframe should be sorted by the &quot;class&quot; and &quot;count&quot; columns.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The dataframe with the stopwords rows removed.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Copy the dataframe to avoid editing the original one.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># Using a set for quicker lookups.</span>
-    <span class="n">stopwords_set</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">stopwords_list</span><span class="p">)</span>
-
-    <span class="c1"># Filter stopwords from tokens.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="o">~</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;tokens&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">stopwords_set</span><span class="p">)]</span>
-
-    <span class="k">return</span> <span class="n">df</span>
-
-
-<span class="k">def</span> <span class="nf">answer_get_index_of_top_n_items</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">3</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Given an NumPy array, return the indexes of the top &quot;n&quot; number of items according to their values.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    array : numpy.ndarray</span>
-<span class="sd">        A 1D NumPy array.</span>
-<span class="sd">    n : int</span>
-<span class="sd">        The top &quot;n&quot; number of items that we want.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    numpy.ndarray</span>
-<span class="sd">        The indexes of the top &quot;n&quot; items.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">return</span> <span class="n">array</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[:</span><span class="o">-</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-</pre></div>
-</div>
-</div>
-</div>
+<p>Click on one of the following links to check answers for the assignments in this tutorial. <strong>Do not check the answers before practicing the tasks.</strong></p>
+<ul class="simple">
+<li><p><span class="xref myst">Click this for task answers if you open this notebook on your local machine</span></p></li>
+<li><p><a class="reference internal" href="answer.html"><span class="doc">Click this for task answers if you view this notebook on a web browser</span></a></p></li>
+</ul>
+<p><a name="util"></a></p>
+</section>
+<section id="utility-file">
+<h2>Utility File<a class="headerlink" href="#utility-file" title="Permalink to this headline">#</a></h2>
+<p>Click on one of the following links to check the provided functions in the utility file for this tutorial.</p>
+<ul class="simple">
+<li><p><span class="xref myst">Click this for utility functions if you open this notebook on your local machine</span></p></li>
+<li><p><a class="reference internal" href="util.html"><span class="doc">Click this for utility functions if you view this notebook on a web browser</span></a></p></li>
+</ul>
 <p><a name="t3"></a></p>
 </section>
 <section id="task-3-preprocess-text-data">
@@ -1055,40 +943,7 @@ Name: count, dtype: int64
 </div>
 </div>
 </div>
-<p>To make the data more understandable, we will make the classes more understandable by adding a <code class="docutils literal notranslate"><span class="pre">class</span></code> column from the original <code class="docutils literal notranslate"><span class="pre">Class</span> <span class="pre">Index</span></code> column, containing the category of the news article. To process both the title and news text together, we will combine the <code class="docutils literal notranslate"><span class="pre">Title</span></code> and <code class="docutils literal notranslate"><span class="pre">Description</span></code> columns into one <code class="docutils literal notranslate"><span class="pre">text</span></code> column. We will deal with just the train data until the point where we need the test data again.</p>
-<div class="cell tag_output_scroll docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">reformat_data</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Reformat the Class Index column to a Class column and combine</span>
-<span class="sd">    the Title and Description columns into a Text column.</span>
-<span class="sd">    Select only the class_idx, class and text columns afterwards.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The original dataframe.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The reformatted dataframe.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Make the class column using a dictionary.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;Class Index&quot;</span><span class="p">:</span> <span class="s2">&quot;class_idx&quot;</span><span class="p">})</span>
-    <span class="n">classes</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;World&quot;</span><span class="p">,</span> <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;Sports&quot;</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;Business&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">:</span> <span class="s2">&quot;Sci/Tech&quot;</span><span class="p">}</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;class&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;class_idx&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">classes</span><span class="o">.</span><span class="n">get</span><span class="p">)</span>
-
-    <span class="c1"># Use string concatonation for the Text column and unescape html characters.</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;Title&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span> <span class="o">+</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Description&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">su</span><span class="o">.</span><span class="n">unescape</span><span class="p">)</span>
-
-    <span class="c1"># Select only the class_idx, class, and text column.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s2">&quot;class_idx&quot;</span><span class="p">,</span> <span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="s2">&quot;text&quot;</span><span class="p">]]</span>
-    <span class="k">return</span> <span class="n">df</span>
-</pre></div>
-</div>
-</div>
-</div>
+<p>To make the data more understandable, we will make the classes more understandable by adding a <code class="docutils literal notranslate"><span class="pre">class</span></code> column from the original <code class="docutils literal notranslate"><span class="pre">Class</span> <span class="pre">Index</span></code> column, containing the category of the news article. To process both the title and news text together, we will combine the <code class="docutils literal notranslate"><span class="pre">Title</span></code> and <code class="docutils literal notranslate"><span class="pre">Description</span></code> columns into one <code class="docutils literal notranslate"><span class="pre">text</span></code> column. We will deal with just the train data until the point where we need the test data again. We provide the <code class="docutils literal notranslate"><span class="pre">reformat_data</span></code> function in the <a class="reference external" href="#util">utility file</a> for this.</p>
 <div class="cell tag_output_scroll docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_train_reformat</span> <span class="o">=</span> <span class="n">reformat_data</span><span class="p">(</span><span class="n">df_train</span><span class="p">)</span>
@@ -1243,26 +1098,13 @@ Tokenized text: [&#39;The&#39;, &#39;quick&#39;, &#39;brown&#39;, &#39;fox&#39;,
 <h3>Stemming / Lemmatization<a class="headerlink" href="#stemming-lemmatization" title="Permalink to this headline">#</a></h3>
 <p>Stemming and lemmatization are two common techniques used in NLP to preprocess and normalize text data. Both techniques involve transforming words into their root form, but they differ in their approach and the level of normalization they provide.</p>
 <p>Stemming is a technique that involves reducing words to their base or stem form by removing any affixes or suffixes. For example, the stem of the word “lazily” would be “lazi”. Stemming is a simple and fast technique that can be useful. However, it can also produce inaccurate or incorrect results since it does not consider the context or part of speech of the word.</p>
-<p>Lemmatization, on the other hand, is a more sophisticated technique that involves identifying the base or dictionary form of a word, also known as the lemma. Unlike stemming, lemmatization can consider the part of speech of the word, which can make it more accurate and reliable. With lemmatization, the lemma of the word “lazily” would be “lazy”. Lemmatization can be slower and more complex than stemming but provides a higher level of normalization.</p>
+<p>Lemmatization, on the other hand, is a more sophisticated technique that involves identifying the base or dictionary form of a word, also known as the lemma. Unlike stemming, lemmatization can consider the part of speech (POS) of the word, which can make it more accurate and reliable. With lemmatization, the lemma of the word “lazily” would be “lazy”. Lemmatization can be slower and more complex than stemming but provides a higher level of normalization.</p>
+<p>Also, lemmatization requires POS tagging. Since the POS tagging logic in the <code class="docutils literal notranslate"><span class="pre">nltk</span></code> package is different from the <code class="docutils literal notranslate"><span class="pre">wordnet</span></code> package, we provide a function <code class="docutils literal notranslate"><span class="pre">wordnet_pos</span></code> in the <a class="reference external" href="#util">utility file</a> for converting the POS tags. The input of the <code class="docutils literal notranslate"><span class="pre">wordnet_pos</span></code> function is a <code class="docutils literal notranslate"><span class="pre">nltk</span></code> POS tag, and the output of the function is a <code class="docutils literal notranslate"><span class="pre">wordnet</span></code> POS tag.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Initialize the stemmer and lemmatizer.</span>
 <span class="n">stemmer</span> <span class="o">=</span> <span class="n">SnowballStemmer</span><span class="p">(</span><span class="s2">&quot;english&quot;</span><span class="p">)</span>
 <span class="n">lemmatizer</span> <span class="o">=</span> <span class="n">WordNetLemmatizer</span><span class="p">()</span>
-
-
-<span class="k">def</span> <span class="nf">wordnet_pos</span><span class="p">(</span><span class="n">nltk_pos</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Function to map POS tags to wordnet tags for lemmatizer.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">if</span> <span class="n">nltk_pos</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;V&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">wordnet</span><span class="o">.</span><span class="n">VERB</span>
-    <span class="k">elif</span> <span class="n">nltk_pos</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;J&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">wordnet</span><span class="o">.</span><span class="n">ADJ</span>
-    <span class="k">elif</span> <span class="n">nltk_pos</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;R&quot;</span><span class="p">):</span>
-        <span class="k">return</span> <span class="n">wordnet</span><span class="o">.</span><span class="n">ADV</span>
-    <span class="k">return</span> <span class="n">wordnet</span><span class="o">.</span><span class="n">NOUN</span>
-
 
 <span class="c1"># Perform stemming and lemmatization seperately on the tokens.</span>
 <span class="n">stemmed_tokens</span> <span class="o">=</span> <span class="p">[</span><span class="n">stemmer</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span><span class="n">token</span><span class="p">)</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">]</span>
@@ -1351,9 +1193,9 @@ Lemmatized text: [&#39;The&#39;, &#39;quick&#39;, &#39;brown&#39;, &#39;fox&#39;
 </div>
 <div class="cell_output docutils container">
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "82324cd0751249a79efbf67c88cad407", "version_major": 2, "version_minor": 0}
+{"model_id": "adc2f2c5e39741b8924fcfd101159c86", "version_major": 2, "version_minor": 0}
 </script><script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "614d80babef14d3aa6fa492acc4951d7", "version_major": 2, "version_minor": 0}
+{"model_id": "ed5c609a458e4c119b914b5145a2de28", "version_major": 2, "version_minor": 0}
 </script><div class="output text_html"><div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -1533,121 +1375,41 @@ Lemmatized text: [&#39;The&#39;, &#39;quick&#39;, &#39;brown&#39;, &#39;fox&#39;
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Test case 1 failed.
+
 Your output is:
-</pre></div>
-</div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>None
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Expected output is:
-</pre></div>
-</div>
-<div class="output text_html"><div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
+None
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
+Expected output is:
+      class_idx     class                                               text  \
+0             3  Business  Wall St. Bears Claw Back Into the Black (Reute...   
+1             3  Business  Carlyle Looks Toward Commercial Aerospace (Reu...   
+2             3  Business  Oil and Economy Cloud Stocks&#39; Outlook (Reuters...   
+3             3  Business  Iraq Halts Oil Exports from Main Southern Pipe...   
+4             3  Business  Oil prices soar to all-time record, posing new...   
+...         ...       ...                                                ...   
+4865          2    Sports  IOA sets up committee to probe dope scandal At...   
+4866          2    Sports  FACTBOX-Jonathan Woodgate factbox MADRID, Aug ...   
+4867          2    Sports  British canoe pair lose out ATHENS (Reuters) -...   
+4895          2    Sports  U.S. Softball Team Posts Shutout No. 7 (AP) AP...   
+4896          2    Sports  Paul Hamm&#39;s example PAUL HAMM&#39;S fall and rise ...   
 
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>class_idx</th>
-      <th>class</th>
-      <th>text</th>
-      <th>tokens</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>3</td>
-      <td>Business</td>
-      <td>Wall St. Bears Claw Back Into the Black (Reute...</td>
-      <td>[Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>3</td>
-      <td>Business</td>
-      <td>Carlyle Looks Toward Commercial Aerospace (Reu...</td>
-      <td>[Carlyle, Looks, Toward, Commercial, Aerospace...</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>3</td>
-      <td>Business</td>
-      <td>Oil and Economy Cloud Stocks' Outlook (Reuters...</td>
-      <td>[Oil, and, Economy, Cloud, Stocks, ', Outlook,...</td>
-    </tr>
-    <tr>
-      <th>3</th>
-      <td>3</td>
-      <td>Business</td>
-      <td>Iraq Halts Oil Exports from Main Southern Pipe...</td>
-      <td>[Iraq, Halts, Oil, Exports, from, Main, Southe...</td>
-    </tr>
-    <tr>
-      <th>4</th>
-      <td>3</td>
-      <td>Business</td>
-      <td>Oil prices soar to all-time record, posing new...</td>
-      <td>[Oil, price, soar, to, all-time, record, ,, po...</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>4865</th>
-      <td>2</td>
-      <td>Sports</td>
-      <td>IOA sets up committee to probe dope scandal At...</td>
-      <td>[IOA, set, up, committee, to, probe, dope, sca...</td>
-    </tr>
-    <tr>
-      <th>4866</th>
-      <td>2</td>
-      <td>Sports</td>
-      <td>FACTBOX-Jonathan Woodgate factbox MADRID, Aug ...</td>
-      <td>[FACTBOX-Jonathan, Woodgate, factbox, MADRID, ...</td>
-    </tr>
-    <tr>
-      <th>4867</th>
-      <td>2</td>
-      <td>Sports</td>
-      <td>British canoe pair lose out ATHENS (Reuters) -...</td>
-      <td>[British, canoe, pair, lose, out, ATHENS, (, R...</td>
-    </tr>
-    <tr>
-      <th>4895</th>
-      <td>2</td>
-      <td>Sports</td>
-      <td>U.S. Softball Team Posts Shutout No. 7 (AP) AP...</td>
-      <td>[U.S., Softball, Team, Posts, Shutout, No, ., ...</td>
-    </tr>
-    <tr>
-      <th>4896</th>
-      <td>2</td>
-      <td>Sports</td>
-      <td>Paul Hamm's example PAUL HAMM'S fall and rise ...</td>
-      <td>[Paul, Hamm, 's, example, PAUL, HAMM, 'S, fall...</td>
-    </tr>
-  </tbody>
-</table>
-<p>4000 rows × 4 columns</p>
-</div></div></div>
+                                                 tokens  
+0     [Wall, St., Bears, Claw, Back, Into, the, Blac...  
+1     [Carlyle, Looks, Toward, Commercial, Aerospace...  
+2     [Oil, and, Economy, Cloud, Stocks, &#39;, Outlook,...  
+3     [Iraq, Halts, Oil, Exports, from, Main, Southe...  
+4     [Oil, price, soar, to, all-time, record, ,, po...  
+...                                                 ...  
+4865  [IOA, set, up, committee, to, probe, dope, sca...  
+4866  [FACTBOX-Jonathan, Woodgate, factbox, MADRID, ...  
+4867  [British, canoe, pair, lose, out, ATHENS, (, R...  
+4895  [U.S., Softball, Team, Posts, Shutout, No, ., ...  
+4896  [Paul, Hamm, &#39;s, example, PAUL, HAMM, &#39;S, fall...  
+
+[4000 rows x 4 columns]
+</pre></div>
+</div>
+</div>
 </div>
 <p><a name="a3-2"></a></p>
 </section>
@@ -1671,12 +1433,12 @@ Your output is:
 <span class="sd">    ----------</span>
 <span class="sd">    df : pandas.DataFrame</span>
 <span class="sd">        The dataframe containing at least the &quot;class&quot; and &quot;tokens&quot; columns.</span>
-<span class="sd">    token_col: str</span>
+<span class="sd">    token_col : str</span>
 <span class="sd">        Name of the column that stores the tokens.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame:</span>
+<span class="sd">    pandas.DataFrame</span>
 <span class="sd">        There should be three columns in this dataframe.</span>
 <span class="sd">        The &quot;class&quot; column shows the document class.</span>
 <span class="sd">        The &quot;tokens&quot; column means tokens in the document class.</span>
@@ -1725,7 +1487,7 @@ Your output is:
   </thead>
   <tbody>
     <tr>
-      <th>3540</th>
+      <th>3541</th>
       <td>Business</td>
       <td>the</td>
       <td>1460</td>
@@ -1737,7 +1499,7 @@ Your output is:
       <td>1217</td>
     </tr>
     <tr>
-      <th>3586</th>
+      <th>3587</th>
       <td>Business</td>
       <td>to</td>
       <td>923</td>
@@ -1749,7 +1511,7 @@ Your output is:
       <td>776</td>
     </tr>
     <tr>
-      <th>2423</th>
+      <th>2424</th>
       <td>Business</td>
       <td>on</td>
       <td>687</td>
@@ -1761,7 +1523,7 @@ Your output is:
       <td>1660</td>
     </tr>
     <tr>
-      <th>3960</th>
+      <th>3961</th>
       <td>Sci/Tech</td>
       <td>a</td>
       <td>1121</td>
@@ -1779,7 +1541,7 @@ Your output is:
       <td>939</td>
     </tr>
     <tr>
-      <th>4422</th>
+      <th>4423</th>
       <td>Sci/Tech</td>
       <td>be</td>
       <td>744</td>
@@ -1858,146 +1620,30 @@ Your output is:
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Test case 1 failed.
+
 Your output is:
-</pre></div>
-</div>
-<div class="output text_html"><div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
+          class      tokens  count
+3541   Business         the   1460
+0      Business           a   1217
+3587   Business          to    923
+1743   Business          in    776
+2424   Business          on    687
+...         ...         ...    ...
+19259     World      zalmay      1
+19261     World     zeitoun      1
+19262     World        zesn      1
+19263     World         zim      1
+19265     World  zimbabwean      1
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
+[19268 rows x 3 columns]
 
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>class</th>
-      <th>tokens</th>
-      <th>count</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>3540</th>
-      <td>Business</td>
-      <td>the</td>
-      <td>1460</td>
-    </tr>
-    <tr>
-      <th>0</th>
-      <td>Business</td>
-      <td>a</td>
-      <td>1217</td>
-    </tr>
-    <tr>
-      <th>3586</th>
-      <td>Business</td>
-      <td>to</td>
-      <td>923</td>
-    </tr>
-    <tr>
-      <th>1743</th>
-      <td>Business</td>
-      <td>in</td>
-      <td>776</td>
-    </tr>
-    <tr>
-      <th>2423</th>
-      <td>Business</td>
-      <td>on</td>
-      <td>687</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>19259</th>
-      <td>World</td>
-      <td>zalmay</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19261</th>
-      <td>World</td>
-      <td>zeitoun</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19262</th>
-      <td>World</td>
-      <td>zesn</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19263</th>
-      <td>World</td>
-      <td>zim</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19265</th>
-      <td>World</td>
-      <td>zimbabwean</td>
-      <td>1</td>
-    </tr>
-  </tbody>
-</table>
-<p>19268 rows × 3 columns</p>
-</div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Expected output is:
-</pre></div>
-</div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>None
+Expected output is:
+None
 </pre></div>
 </div>
 </div>
 </div>
-<p>In the following function, we use the <a class="reference external" href="https://amueller.github.io/word_cloud/auto_examples/simple.html#sphx-glr-auto-examples-simple-py">wordcloud</a> package to visualize the word counts that you just computed.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">visualize_word_counts</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">class_col</span><span class="o">=</span><span class="s2">&quot;class&quot;</span><span class="p">,</span> <span class="n">token_col</span><span class="o">=</span><span class="s2">&quot;tokens&quot;</span><span class="p">,</span> <span class="n">count_col</span><span class="o">=</span><span class="s2">&quot;count&quot;</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Displays word clouds given a word counts dataframe.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The dataframe with three columns:</span>
-<span class="sd">        - The &quot;class&quot; column (each document class)</span>
-<span class="sd">        - The &quot;tokens&quot; column (showing tokens in each document class)</span>
-<span class="sd">        - The &quot;count&quot; column (showing counts for each token)</span>
-<span class="sd">    class_col : str</span>
-<span class="sd">        Name of the class column (if different from &quot;class&quot;).</span>
-<span class="sd">    token_col : str</span>
-<span class="sd">        Name of the token column (if different from &quot;tokens&quot;).</span>
-<span class="sd">    count_col : str</span>
-<span class="sd">        Name of the count column (if different from &quot;count&quot;).</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Groupby the class column and loop through all of them</span>
-    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">df_group</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">class_col</span><span class="p">):</span>
-        <span class="c1"># Compute a dictionary with word frequencies</span>
-        <span class="n">frequencies</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">df_group</span><span class="p">[</span><span class="n">token_col</span><span class="p">],</span> <span class="n">df_group</span><span class="p">[</span><span class="n">count_col</span><span class="p">]))</span>
-        <span class="c1"># Generate word cloud from frequencies</span>
-        <span class="n">wordcloud</span> <span class="o">=</span> <span class="n">WordCloud</span><span class="p">(</span><span class="n">background_color</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span><span class="o">.</span><span class="n">generate_from_frequencies</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)</span>
-        <span class="c1"># Display image</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s2">&quot;off&quot;</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Class: &quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">wordcloud</span><span class="p">)</span>
-        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-</div>
+<p>We provide the <code class="docutils literal notranslate"><span class="pre">visualize_word_counts</span></code> function in the <a class="reference external" href="#util">utility file</a> to visualize the word counts that you just computed using the <a class="reference external" href="https://amueller.github.io/word_cloud/auto_examples/simple.html#sphx-glr-auto-examples-simple-py">wordcloud</a> package.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">visualize_word_counts</span><span class="p">(</span><span class="n">answer_word_counts</span><span class="p">)</span>
@@ -2005,10 +1651,10 @@ Your output is:
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/tutorial-text-data_57_0.png" src="../_images/tutorial-text-data_57_0.png" />
-<img alt="../_images/tutorial-text-data_57_1.png" src="../_images/tutorial-text-data_57_1.png" />
-<img alt="../_images/tutorial-text-data_57_2.png" src="../_images/tutorial-text-data_57_2.png" />
-<img alt="../_images/tutorial-text-data_57_3.png" src="../_images/tutorial-text-data_57_3.png" />
+<img alt="../_images/tutorial-text-data_58_0.png" src="../_images/tutorial-text-data_58_0.png" />
+<img alt="../_images/tutorial-text-data_58_1.png" src="../_images/tutorial-text-data_58_1.png" />
+<img alt="../_images/tutorial-text-data_58_2.png" src="../_images/tutorial-text-data_58_2.png" />
+<img alt="../_images/tutorial-text-data_58_3.png" src="../_images/tutorial-text-data_58_3.png" />
 </div>
 </div>
 <p><a name="a3-3"></a></p>
@@ -2086,7 +1732,7 @@ Your output is:
   </thead>
   <tbody>
     <tr>
-      <th>2947</th>
+      <th>2948</th>
       <td>Business</td>
       <td>reuters</td>
       <td>483</td>
@@ -2098,25 +1744,25 @@ Your output is:
       <td>297</td>
     </tr>
     <tr>
-      <th>2697</th>
+      <th>2698</th>
       <td>Business</td>
       <td>price</td>
       <td>281</td>
     </tr>
     <tr>
-      <th>3040</th>
+      <th>3041</th>
       <td>Business</td>
       <td>say</td>
       <td>281</td>
     </tr>
     <tr>
-      <th>2418</th>
+      <th>2419</th>
       <td>Business</td>
       <td>oil</td>
       <td>278</td>
     </tr>
     <tr>
-      <th>4208</th>
+      <th>4209</th>
       <td>Sci/Tech</td>
       <td>ap</td>
       <td>236</td>
@@ -2134,7 +1780,7 @@ Your output is:
       <td>186</td>
     </tr>
     <tr>
-      <th>4951</th>
+      <th>4952</th>
       <td>Sci/Tech</td>
       <td>company</td>
       <td>137</td>
@@ -2219,109 +1865,28 @@ Your output is:
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Test case 1 failed.
+
 Your output is:
-</pre></div>
-</div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>None
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Expected output is:
-</pre></div>
-</div>
-<div class="output text_html"><div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
+None
 
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
+Expected output is:
+          class      tokens  count
+2948   Business     reuters    483
+2351   Business         new    297
+2698   Business       price    281
+3041   Business         say    281
+2419   Business         oil    278
+...         ...         ...    ...
+19259     World      zalmay      1
+19261     World     zeitoun      1
+19262     World        zesn      1
+19263     World         zim      1
+19265     World  zimbabwean      1
 
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>class</th>
-      <th>tokens</th>
-      <th>count</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>2947</th>
-      <td>Business</td>
-      <td>reuters</td>
-      <td>483</td>
-    </tr>
-    <tr>
-      <th>2351</th>
-      <td>Business</td>
-      <td>new</td>
-      <td>297</td>
-    </tr>
-    <tr>
-      <th>2697</th>
-      <td>Business</td>
-      <td>price</td>
-      <td>281</td>
-    </tr>
-    <tr>
-      <th>3040</th>
-      <td>Business</td>
-      <td>say</td>
-      <td>281</td>
-    </tr>
-    <tr>
-      <th>2418</th>
-      <td>Business</td>
-      <td>oil</td>
-      <td>278</td>
-    </tr>
-    <tr>
-      <th>...</th>
-      <td>...</td>
-      <td>...</td>
-      <td>...</td>
-    </tr>
-    <tr>
-      <th>19259</th>
-      <td>World</td>
-      <td>zalmay</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19261</th>
-      <td>World</td>
-      <td>zeitoun</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19262</th>
-      <td>World</td>
-      <td>zesn</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19263</th>
-      <td>World</td>
-      <td>zim</td>
-      <td>1</td>
-    </tr>
-    <tr>
-      <th>19265</th>
-      <td>World</td>
-      <td>zimbabwean</td>
-      <td>1</td>
-    </tr>
-  </tbody>
-</table>
-<p>18787 rows × 3 columns</p>
-</div></div></div>
+[18787 rows x 3 columns]
+</pre></div>
+</div>
+</div>
 </div>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -2330,10 +1895,10 @@ Your output is:
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/tutorial-text-data_66_0.png" src="../_images/tutorial-text-data_66_0.png" />
-<img alt="../_images/tutorial-text-data_66_1.png" src="../_images/tutorial-text-data_66_1.png" />
-<img alt="../_images/tutorial-text-data_66_2.png" src="../_images/tutorial-text-data_66_2.png" />
-<img alt="../_images/tutorial-text-data_66_3.png" src="../_images/tutorial-text-data_66_3.png" />
+<img alt="../_images/tutorial-text-data_67_0.png" src="../_images/tutorial-text-data_67_0.png" />
+<img alt="../_images/tutorial-text-data_67_1.png" src="../_images/tutorial-text-data_67_1.png" />
+<img alt="../_images/tutorial-text-data_67_2.png" src="../_images/tutorial-text-data_67_2.png" />
+<img alt="../_images/tutorial-text-data_67_3.png" src="../_images/tutorial-text-data_67_3.png" />
 </div>
 </div>
 <p><a name="spacy"></a></p>
@@ -2527,48 +2092,17 @@ Your output is:
 </table>
 </div></div></div>
 </div>
-<p>The above example only deals with one sentence. Now we need to deal with all the sentences in all the classes. Below is a function to add a column with a <code class="docutils literal notranslate"><span class="pre">Doc</span></code> representation of the <code class="docutils literal notranslate"><span class="pre">text</span></code> column to the dataframe.</p>
+<p>The above example only deals with one sentence. Now we need to deal with all the sentences in all the classes. We provide a <code class="docutils literal notranslate"><span class="pre">add_spacy_doc</span></code> function in the <a class="reference external" href="#util">utility file</a> to add a column with a <code class="docutils literal notranslate"><span class="pre">Doc</span></code> representation of the <code class="docutils literal notranslate"><span class="pre">text</span></code> column to the dataframe. Now we can add the spaCy tokens using the above function. This step will take some time since it needs to process all the sentences. So we added a progress bar using the <code class="docutils literal notranslate"><span class="pre">tqdm</span></code> package.</p>
 <div class="cell tag_output_scroll docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add_spacy_doc</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Add a column with the spaCy Doc objects.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The dataframe containing at least the &quot;text&quot; column.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The dataframe with the added &quot;doc&quot; column.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Copy the dataframe to avoid editing the original one.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># Get the number of CPUs in the machine.</span>
-    <span class="n">n_process</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span><span class="o">-</span><span class="mi">2</span><span class="p">)</span>
-
-    <span class="c1"># Use multiple CPUs to speed up computing.</span>
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;doc&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">doc</span> <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">nlp</span><span class="o">.</span><span class="n">pipe</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;text&quot;</span><span class="p">],</span> <span class="n">n_process</span><span class="o">=</span><span class="n">n_process</span><span class="p">),</span> <span class="n">total</span><span class="o">=</span><span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])]</span>
-
-    <span class="k">return</span> <span class="n">df</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>Now we can add the spaCy tokens using the above function. This step will take some time since it needs to process all the sentences. So we added a progress bar.</p>
-<div class="cell tag_output_scroll docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_with_nltk_tokens_and_spacy_doc</span> <span class="o">=</span> <span class="n">add_spacy_doc</span><span class="p">(</span><span class="n">answer_df_with_tokens</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_with_nltk_tokens_and_spacy_doc</span> <span class="o">=</span> <span class="n">add_spacy_doc</span><span class="p">(</span><span class="n">answer_df_with_tokens</span><span class="p">,</span> <span class="n">nlp</span><span class="p">)</span>
 <span class="n">display</span><span class="p">(</span><span class="n">df_with_nltk_tokens_and_spacy_doc</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
 <div class="cell_output docutils container">
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "5767630e5ceb44ccbdea5a2db728eb17", "version_major": 2, "version_minor": 0}
+{"model_id": "c03ada6ea4e24483805124f8a00b7df1", "version_major": 2, "version_minor": 0}
 </script><div class="output text_html"><div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -2688,36 +2222,7 @@ Your output is:
 <p>4000 rows × 5 columns</p>
 </div></div></div>
 </div>
-<p>The following function will add the spacy tokens to our original dataframe.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add_spacy_tokens</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Add a column with a list of lemmatized tokens, without stopwords and numbers.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The dataframe containing at least the &quot;doc&quot; column.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    pandas.DataFrame</span>
-<span class="sd">        The dataframe with the &quot;spacy_tokens&quot; column.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Copy the dataframe to avoid editing the original one.</span>
-    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;spacy_tokens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;doc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
-        <span class="k">lambda</span> <span class="n">tokens</span><span class="p">:</span> <span class="p">[</span><span class="n">token</span><span class="o">.</span><span class="n">lemma_</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span> <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_alpha</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_stop</span><span class="p">]</span>
-    <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">df</span>
-</pre></div>
-</div>
-</div>
-</div>
-<p>We can run the code below to add the spacy tokens.</p>
+<p>We also provide a <code class="docutils literal notranslate"><span class="pre">add_spacy_tokens</span></code> function in the <a class="reference external" href="#util">utility file</a> to add the spacy tokens to our original dataframe. We can run the code below to add the spacy tokens.</p>
 <div class="cell tag_output_scroll docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_with_nltk_tokens_and_spacy_tokens</span> <span class="o">=</span> <span class="n">add_spacy_tokens</span><span class="p">(</span><span class="n">df_with_nltk_tokens_and_spacy_doc</span><span class="p">)</span>
@@ -2760,7 +2265,7 @@ Your output is:
       <td>Wall St. Bears Claw Back Into the Black (Reute...</td>
       <td>[Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
       <td>(Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
-      <td>[Wall, Bears, Claw, Black, Reuters, Reuters, S...</td>
+      <td>[Wall, Bears, Claw, Black, Reuters, Reuters, s...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -2891,121 +2396,121 @@ Your output is:
   </thead>
   <tbody>
     <tr>
-      <th>2792</th>
+      <th>2793</th>
       <td>Business</td>
       <td>reuters</td>
       <td>483</td>
     </tr>
     <tr>
-      <th>2559</th>
+      <th>2563</th>
       <td>Business</td>
       <td>price</td>
-      <td>308</td>
+      <td>317</td>
     </tr>
     <tr>
-      <th>2231</th>
+      <th>2240</th>
       <td>Business</td>
       <td>new</td>
       <td>298</td>
     </tr>
     <tr>
-      <th>2881</th>
+      <th>2880</th>
       <td>Business</td>
       <td>say</td>
       <td>287</td>
     </tr>
     <tr>
-      <th>2290</th>
+      <th>2299</th>
       <td>Business</td>
       <td>oil</td>
       <td>281</td>
     </tr>
     <tr>
-      <th>3933</th>
+      <th>3931</th>
       <td>Sci/Tech</td>
       <td>ap</td>
       <td>236</td>
     </tr>
     <tr>
-      <th>6784</th>
+      <th>6774</th>
       <td>Sci/Tech</td>
       <td>new</td>
-      <td>225</td>
+      <td>226</td>
     </tr>
     <tr>
-      <th>7740</th>
+      <th>7739</th>
       <td>Sci/Tech</td>
       <td>say</td>
       <td>161</td>
     </tr>
     <tr>
-      <th>4630</th>
+      <th>4625</th>
       <td>Sci/Tech</td>
       <td>company</td>
       <td>140</td>
     </tr>
     <tr>
-      <th>6593</th>
+      <th>6584</th>
       <td>Sci/Tech</td>
       <td>microsoft</td>
       <td>124</td>
     </tr>
     <tr>
-      <th>9177</th>
+      <th>9178</th>
       <td>Sports</td>
       <td>athens</td>
-      <td>355</td>
+      <td>356</td>
     </tr>
     <tr>
-      <th>9109</th>
+      <th>9112</th>
       <td>Sports</td>
       <td>ap</td>
       <td>315</td>
     </tr>
     <tr>
-      <th>11771</th>
+      <th>11775</th>
       <td>Sports</td>
       <td>olympic</td>
-      <td>261</td>
+      <td>262</td>
     </tr>
     <tr>
-      <th>13437</th>
+      <th>13447</th>
       <td>Sports</td>
       <td>win</td>
-      <td>252</td>
+      <td>233</td>
     </tr>
     <tr>
-      <th>10644</th>
+      <th>10642</th>
       <td>Sports</td>
       <td>gold</td>
       <td>212</td>
     </tr>
     <tr>
-      <th>17099</th>
+      <th>17110</th>
       <td>World</td>
       <td>say</td>
       <td>294</td>
     </tr>
     <tr>
-      <th>16956</th>
+      <th>16967</th>
       <td>World</td>
       <td>reuters</td>
       <td>276</td>
     </tr>
     <tr>
-      <th>13717</th>
+      <th>13728</th>
       <td>World</td>
       <td>ap</td>
       <td>261</td>
     </tr>
     <tr>
-      <th>16176</th>
+      <th>16185</th>
       <td>World</td>
       <td>najaf</td>
       <td>157</td>
     </tr>
     <tr>
-      <th>13610</th>
+      <th>13622</th>
       <td>World</td>
       <td>afp</td>
       <td>150</td>
@@ -3040,7 +2545,7 @@ Your output is:
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0       Wall Bears Claw Black Reuters Reuters Short se...
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0       Wall Bears Claw Black Reuters Reuters short se...
 1       Carlyle look Commercial Aerospace Reuters Reut...
 2       oil Economy Cloud Stocks Outlook Reuters Reute...
 3       Iraq Halts Oil Exports Main Southern Pipeline ...
@@ -3096,10 +2601,10 @@ Name: spacy_tokens, Length: 4000, dtype: object
       <th>accuse</th>
       <th>action</th>
       <th>activity</th>
+      <th>ad</th>
       <th>add</th>
       <th>advance</th>
       <th>afghanistan</th>
-      <th>afp</th>
       <th>...</th>
       <th>wrap</th>
       <th>xinhuanet</th>
@@ -3221,7 +2726,7 @@ Name: spacy_tokens, Length: 4000, dtype: object
       <td>0</td>
       <td>0</td>
       <td>0</td>
-      <td>2</td>
+      <td>0</td>
       <td>...</td>
       <td>0</td>
       <td>0</td>
@@ -3491,15 +2996,9 @@ iteration: 10 of max_iter: 10
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Test case 1 failed.
 Your output is:
-</pre></div>
-</div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>None
-</pre></div>
-</div>
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Expected output is:
-</pre></div>
-</div>
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>array([ 40, 771, 587, 995,   9, 668, 746, 482, 600, 559])
+None
+Expected output is:
+[ 38  56 602 978 361 884 526 747 995 603]
 </pre></div>
 </div>
 </div>
@@ -3555,7 +3054,7 @@ Your output is:
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #0:
-ap say new year afp president reuters kill official monday
+ap athens olympic win gold team man reuters year olympics
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3582,48 +3081,48 @@ ap say new year afp president reuters kill official monday
   <tbody>
     <tr>
       <th>ap</th>
-      <td>777.900339</td>
+      <td>403.515105</td>
     </tr>
     <tr>
-      <th>say</th>
-      <td>275.078724</td>
+      <th>athens</th>
+      <td>403.246789</td>
     </tr>
     <tr>
-      <th>new</th>
-      <td>258.558777</td>
+      <th>olympic</th>
+      <td>309.246800</td>
     </tr>
     <tr>
-      <th>year</th>
-      <td>182.610725</td>
+      <th>win</th>
+      <td>286.162784</td>
     </tr>
     <tr>
-      <th>afp</th>
-      <td>154.539267</td>
+      <th>gold</th>
+      <td>243.246784</td>
     </tr>
     <tr>
-      <th>president</th>
-      <td>152.645783</td>
+      <th>team</th>
+      <td>210.578474</td>
+    </tr>
+    <tr>
+      <th>man</th>
+      <td>199.276155</td>
     </tr>
     <tr>
       <th>reuters</th>
-      <td>129.226361</td>
+      <td>190.315506</td>
     </tr>
     <tr>
-      <th>kill</th>
-      <td>128.812359</td>
+      <th>year</th>
+      <td>182.915320</td>
     </tr>
     <tr>
-      <th>official</th>
-      <td>126.576249</td>
-    </tr>
-    <tr>
-      <th>monday</th>
-      <td>124.602403</td>
+      <th>olympics</th>
+      <td>175.246315</td>
     </tr>
   </tbody>
 </table>
 </div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #1:
-athens olympic win gold reuters olympics medal team man greece
+reuters price oil google new say stock share york high
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3649,49 +3148,49 @@ athens olympic win gold reuters olympics medal team man greece
   </thead>
   <tbody>
     <tr>
-      <th>athens</th>
-      <td>402.248217</td>
-    </tr>
-    <tr>
-      <th>olympic</th>
-      <td>308.247659</td>
-    </tr>
-    <tr>
-      <th>win</th>
-      <td>264.590555</td>
-    </tr>
-    <tr>
-      <th>gold</th>
-      <td>243.248904</td>
-    </tr>
-    <tr>
       <th>reuters</th>
-      <td>206.480045</td>
+      <td>613.090454</td>
     </tr>
     <tr>
-      <th>olympics</th>
-      <td>176.248240</td>
+      <th>price</th>
+      <td>447.227585</td>
     </tr>
     <tr>
-      <th>medal</th>
-      <td>173.249521</td>
+      <th>oil</th>
+      <td>333.991865</td>
     </tr>
     <tr>
-      <th>team</th>
-      <td>165.746113</td>
+      <th>google</th>
+      <td>330.413708</td>
     </tr>
     <tr>
-      <th>man</th>
-      <td>156.072367</td>
+      <th>new</th>
+      <td>327.240235</td>
     </tr>
     <tr>
-      <th>greece</th>
-      <td>141.247460</td>
+      <th>say</th>
+      <td>302.630197</td>
+    </tr>
+    <tr>
+      <th>stock</th>
+      <td>251.689804</td>
+    </tr>
+    <tr>
+      <th>share</th>
+      <td>240.112990</td>
+    </tr>
+    <tr>
+      <th>york</th>
+      <td>220.173493</td>
+    </tr>
+    <tr>
+      <th>high</th>
+      <td>214.368258</td>
     </tr>
   </tbody>
 </table>
 </div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #2:
-reuters oil price new high say rise profit stock tuesday
+new ap company say microsoft security software service plan time
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3717,49 +3216,49 @@ reuters oil price new high say rise profit stock tuesday
   </thead>
   <tbody>
     <tr>
-      <th>reuters</th>
-      <td>462.338250</td>
-    </tr>
-    <tr>
-      <th>oil</th>
-      <td>335.243662</td>
-    </tr>
-    <tr>
-      <th>price</th>
-      <td>306.689610</td>
-    </tr>
-    <tr>
       <th>new</th>
-      <td>281.894969</td>
+      <td>294.138710</td>
     </tr>
     <tr>
-      <th>high</th>
-      <td>272.691721</td>
+      <th>ap</th>
+      <td>211.640513</td>
+    </tr>
+    <tr>
+      <th>company</th>
+      <td>203.847837</td>
     </tr>
     <tr>
       <th>say</th>
-      <td>203.454902</td>
+      <td>197.105016</td>
     </tr>
     <tr>
-      <th>rise</th>
-      <td>194.643738</td>
+      <th>microsoft</th>
+      <td>128.118405</td>
     </tr>
     <tr>
-      <th>profit</th>
-      <td>185.251643</td>
+      <th>security</th>
+      <td>118.300459</td>
     </tr>
     <tr>
-      <th>stock</th>
-      <td>174.271560</td>
+      <th>software</th>
+      <td>117.660863</td>
     </tr>
     <tr>
-      <th>tuesday</th>
-      <td>155.282308</td>
+      <th>service</th>
+      <td>109.950400</td>
+    </tr>
+    <tr>
+      <th>plan</th>
+      <td>107.479263</td>
+    </tr>
+    <tr>
+      <th>time</th>
+      <td>107.182716</td>
     </tr>
   </tbody>
 </table>
 </div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #3:
-google company say reuters new public najaf share ipo security
+say reuters ap iraq najaf president plan kill minister wednesday
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3785,44 +3284,44 @@ google company say reuters new public najaf share ipo security
   </thead>
   <tbody>
     <tr>
-      <th>google</th>
-      <td>348.246768</td>
-    </tr>
-    <tr>
-      <th>company</th>
-      <td>294.646492</td>
-    </tr>
-    <tr>
       <th>say</th>
-      <td>265.408176</td>
+      <td>257.517882</td>
     </tr>
     <tr>
       <th>reuters</th>
-      <td>249.955344</td>
+      <td>240.920321</td>
     </tr>
     <tr>
-      <th>new</th>
-      <td>181.034259</td>
+      <th>ap</th>
+      <td>225.568027</td>
     </tr>
     <tr>
-      <th>public</th>
-      <td>165.080293</td>
+      <th>iraq</th>
+      <td>168.908879</td>
     </tr>
     <tr>
       <th>najaf</th>
-      <td>157.247419</td>
+      <td>157.249665</td>
     </tr>
     <tr>
-      <th>share</th>
-      <td>145.815936</td>
+      <th>president</th>
+      <td>154.238458</td>
     </tr>
     <tr>
-      <th>ipo</th>
-      <td>141.248697</td>
+      <th>plan</th>
+      <td>150.074533</td>
     </tr>
     <tr>
-      <th>security</th>
-      <td>139.963240</td>
+      <th>kill</th>
+      <td>133.206681</td>
+    </tr>
+    <tr>
+      <th>minister</th>
+      <td>132.223089</td>
+    </tr>
+    <tr>
+      <th>wednesday</th>
+      <td>110.130430</td>
     </tr>
   </tbody>
 </table>
@@ -3844,10 +3343,10 @@ google company say reuters new public najaf share ipo security
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/tutorial-text-data_110_0.png" src="../_images/tutorial-text-data_110_0.png" />
-<img alt="../_images/tutorial-text-data_110_1.png" src="../_images/tutorial-text-data_110_1.png" />
-<img alt="../_images/tutorial-text-data_110_2.png" src="../_images/tutorial-text-data_110_2.png" />
-<img alt="../_images/tutorial-text-data_110_3.png" src="../_images/tutorial-text-data_110_3.png" />
+<img alt="../_images/tutorial-text-data_107_0.png" src="../_images/tutorial-text-data_107_0.png" />
+<img alt="../_images/tutorial-text-data_107_1.png" src="../_images/tutorial-text-data_107_1.png" />
+<img alt="../_images/tutorial-text-data_107_2.png" src="../_images/tutorial-text-data_107_2.png" />
+<img alt="../_images/tutorial-text-data_107_3.png" src="../_images/tutorial-text-data_107_3.png" />
 </div>
 </div>
 <p>Compare this with the word cloud visualizations in the pre-processing step previously. Does the LDA topic modeling represent the actural four document classes in the training data? What do you think?</p>
@@ -3879,7 +3378,7 @@ google company say reuters new public najaf share ipo security
 <span class="n">df_test_with_tokens</span> <span class="o">=</span> <span class="n">answer_tokenize_and_lemmatize</span><span class="p">(</span><span class="n">df_test_reformat</span><span class="p">)</span>
 
 <span class="c1"># spaCy preprocessing.</span>
-<span class="n">df_test_with_nltk_tokens_and_spacy_tokens</span> <span class="o">=</span> <span class="n">add_spacy_tokens</span><span class="p">(</span><span class="n">add_spacy_doc</span><span class="p">(</span><span class="n">df_test_with_tokens</span><span class="p">))</span>
+<span class="n">df_test_with_nltk_tokens_and_spacy_tokens</span> <span class="o">=</span> <span class="n">add_spacy_tokens</span><span class="p">(</span><span class="n">add_spacy_doc</span><span class="p">(</span><span class="n">df_test_with_tokens</span><span class="p">,</span> <span class="n">nlp</span><span class="p">))</span>
 
 <span class="n">display</span><span class="p">(</span><span class="n">df_test_with_nltk_tokens_and_spacy_tokens</span><span class="p">)</span>
 </pre></div>
@@ -3887,11 +3386,11 @@ google company say reuters new public najaf share ipo security
 </div>
 <div class="cell_output docutils container">
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "8b6a716b70ff450b89103dad5c71d140", "version_major": 2, "version_minor": 0}
+{"model_id": "7c0ce75d9072407eb37fb8ac366051a6", "version_major": 2, "version_minor": 0}
 </script><script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "e405d687e81a45948577ee1f9c2f3522", "version_major": 2, "version_minor": 0}
+{"model_id": "93c084a874054aac9d37dfe431c1c9d4", "version_major": 2, "version_minor": 0}
 </script><script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "bb12533fd4b240469550b0ae7fc2fd2f", "version_major": 2, "version_minor": 0}
+{"model_id": "5897f0dc6aea48b78b6dcc41757a3f17", "version_major": 2, "version_minor": 0}
 </script><div class="output text_html"><div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -3926,7 +3425,7 @@ google company say reuters new public najaf share ipo security
       <td>Fears for T N pension after talks Unions repre...</td>
       <td>[Fears, for, T, N, pension, after, talk, Union...</td>
       <td>(Fears, for, T, N, pension, after, talks, Unio...</td>
-      <td>[fear, T, N, pension, talk, Unions, represent,...</td>
+      <td>[fear, t, N, pension, talk, Unions, represent,...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -3935,7 +3434,7 @@ google company say reuters new public najaf share ipo security
       <td>The Race is On: Second Private Team Sets Launc...</td>
       <td>[The, Race, be, On, :, Second, Private, Team, ...</td>
       <td>(The, Race, is, On, :, Second, Private, Team, ...</td>
-      <td>[Race, second, private, team, set, Launch, Dat...</td>
+      <td>[race, Second, private, Team, Sets, Launch, Da...</td>
     </tr>
     <tr>
       <th>2</th>
@@ -3944,7 +3443,7 @@ google company say reuters new public najaf share ipo security
       <td>Ky. Company Wins Grant to Study Peptides (AP) ...</td>
       <td>[Ky., Company, Wins, Grant, to, Study, Peptide...</td>
       <td>(Ky., Company, Wins, Grant, to, Study, Peptide...</td>
-      <td>[Company, win, Grant, study, Peptides, AP, AP,...</td>
+      <td>[Company, win, Grant, Study, Peptides, AP, AP,...</td>
     </tr>
     <tr>
       <th>3</th>
@@ -3962,7 +3461,7 @@ google company say reuters new public najaf share ipo security
       <td>Calif. Aims to Limit Farm-Related Smog (AP) AP...</td>
       <td>[Calif, ., Aims, to, Limit, Farm-Related, Smog...</td>
       <td>(Calif., Aims, to, Limit, Farm, -, Related, Sm...</td>
-      <td>[aim, limit, Farm, Related, Smog, AP, AP, Sout...</td>
+      <td>[aim, Limit, Farm, relate, Smog, AP, AP, South...</td>
     </tr>
     <tr>
       <th>...</th>
@@ -3989,7 +3488,7 @@ google company say reuters new public najaf share ipo security
       <td>Dollar Holds Gains, Fed Comments Help  TOKYO (...</td>
       <td>[Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
       <td>(Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
-      <td>[Dollar, hold, Gains, Fed, Comments, help, TOK...</td>
+      <td>[Dollar, Holds, Gains, Fed, comment, help, TOK...</td>
     </tr>
     <tr>
       <th>481</th>
@@ -4047,36 +3546,36 @@ google company say reuters new public najaf share ipo security
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[-2.76309401e-01 -7.75136873e-02  3.03611517e-01  2.10117131e-01
-   7.57407770e-02 -6.52443692e-02 -8.24972093e-02  7.95511529e-02
-  -2.73732506e-02  3.29312652e-01 -1.14486247e-01 -4.21194583e-01
-  -6.78604618e-02  3.98109434e-03  3.59004796e-01  1.16996072e-01
-   3.15445438e-02  2.08379328e-01  5.15416116e-02 -2.08713517e-01
-  -3.04057449e-01 -6.45264983e-02  3.26634556e-01 -9.80910361e-02
-  -3.32489789e-01 -3.82966809e-02 -9.86100435e-02  5.41328311e-01
-  -3.95968288e-01 -2.45931149e-01  3.30803782e-01  1.48946956e-01
-   2.03940153e-01 -9.69057679e-02  1.58692021e-02  1.50189862e-01
-   7.09178805e-01 -2.64038652e-01 -4.34074432e-01 -2.68073887e-01]
- [ 4.56083333e-03  1.31083094e-02  7.98655115e-03 -2.63949041e-04
-  -4.30374034e-02  1.06827244e-02 -1.94894290e-03  1.58272684e-02
-   2.59405803e-02  2.87713557e-02  1.35446666e-03 -4.18917127e-02
-  -3.02243214e-02 -8.29823501e-03  3.19179110e-02  5.47345169e-03
-   3.09204757e-02 -1.22328512e-02 -3.03305164e-02 -2.89320890e-02
-  -4.30800114e-03 -2.20099892e-02  4.92604710e-02 -1.15064194e-03
-  -3.02943047e-02  1.91085767e-02 -2.83540934e-02  6.58964068e-02
-  -2.68006418e-02 -3.31034139e-03  3.38040404e-02  2.95044240e-02
-   4.62594591e-02 -3.08212116e-02 -2.07123328e-02  1.67044569e-02
-   1.26870573e-01  2.46338472e-02 -3.80816832e-02  1.53579945e-02]
- [-9.91130546e-02  8.52283277e-03  8.49402323e-02  6.22117147e-02
-   4.71997540e-03  3.20366817e-03 -3.65188904e-02  4.02424522e-02
-   5.79491816e-03  1.54158622e-01 -1.50499800e-02 -1.59003824e-01
-  -2.53102332e-02 -9.40567069e-03  1.14784084e-01  6.87591881e-02
-   4.83738221e-02  2.07013451e-02 -3.70337218e-02 -8.76008272e-02
-  -1.10275254e-01 -8.97379685e-03  1.38567820e-01 -4.64034118e-02
-  -9.26503465e-02 -1.24102989e-02 -7.68525153e-02  1.83954731e-01
-  -1.21105552e-01 -6.01319149e-02  1.25546858e-01  5.74087873e-02
-   6.94805682e-02 -1.52010396e-02 -4.88784648e-02  4.25413921e-02
-   3.23110342e-01 -3.86326574e-02 -1.77580908e-01 -7.31595308e-02]]
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[-2.60392636e-01  3.61957699e-02  1.09209269e-01  1.59883693e-01
+   7.47058615e-02 -1.83978200e-01  1.15174890e-01  1.41995341e-01
+  -1.27571225e-01  4.41441536e-01 -7.66160041e-02 -4.21129227e-01
+  -7.70293251e-02 -1.32060111e-01  4.39062655e-01  2.57349819e-01
+  -6.41567782e-02  1.71880454e-01  6.53994977e-02 -2.28234261e-01
+  -1.31064489e-01  1.52635470e-03  2.27316573e-01  1.49013713e-01
+  -2.45736703e-01  1.41700311e-02 -9.18157026e-02  3.44747216e-01
+  -3.31136227e-01 -1.63988218e-01  3.18268031e-01 -1.14187524e-01
+  -9.01155993e-02 -3.15312743e-01 -2.72045583e-02  1.96554258e-01
+   7.19608963e-01 -4.33225513e-01 -3.80716771e-01 -3.01050067e-01]
+ [-5.55762206e-04  1.75153557e-02  1.63081214e-02  4.37505618e-02
+   1.91775504e-02 -2.68786456e-02 -9.65814292e-03  4.77873608e-02
+   1.68873817e-02  7.72785023e-02 -1.24694523e-03 -4.48038988e-02
+  -3.69028486e-02  1.08696317e-04  5.88426664e-02  4.69341688e-02
+  -9.38272290e-03  8.82259570e-03  2.31929235e-02 -4.38504890e-02
+  -1.66977551e-02 -2.26898771e-02  3.22737843e-02  2.31878553e-02
+  -1.98843461e-02  5.50923310e-03  1.77841890e-03  4.55366671e-02
+  -2.32978743e-02 -3.88195775e-02  6.80615827e-02 -2.95684878e-02
+  -2.69708876e-02 -5.04455604e-02 -1.28503460e-02  2.98611298e-02
+   1.10825963e-01 -7.42685422e-02 -6.67480677e-02 -5.01767062e-02]
+ [-7.88029432e-02  3.57245207e-02  1.87077932e-02  8.16702172e-02
+  -3.05961762e-02 -5.07439226e-02  3.81175242e-02  3.65127474e-02
+  -5.89498617e-02  1.90558270e-01 -2.58215386e-02 -1.45636722e-01
+  -3.71700376e-02 -7.68104494e-02  1.64298996e-01  1.00462683e-01
+   7.34513486e-03  2.07834784e-02  4.85605095e-03 -8.80082399e-02
+  -4.16397192e-02 -2.22325884e-02  1.00829713e-01  1.42552294e-02
+  -7.83072636e-02 -1.89409941e-03 -3.98297459e-02  1.38811961e-01
+  -1.12817809e-01 -3.60937640e-02  1.17614634e-01 -6.38329387e-02
+  -2.99992543e-02 -8.16034526e-02 -3.84166278e-02  1.12850294e-01
+   3.21655065e-01 -1.53566912e-01 -1.89866170e-01 -6.67793155e-02]]
 </pre></div>
 </div>
 </div>
@@ -4089,71 +3588,24 @@ google company say reuters new public najaf share ipo security
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[ 0.8194096  -0.32325384  0.629434   ... -0.4773795  -0.75188184
-   0.0357812 ]
- [ 0.81603235 -1.2405076   0.9558864  ...  0.52738035 -1.0743449
-  -0.30024663]
- [ 1.1372288  -1.0574455  -0.20238371 ...  0.38068694 -0.03450352
-   0.540362  ]
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[ 0.44236845 -0.01180173  0.20908105 ... -0.18478878 -0.17872915
+  -0.20212969]
+ [ 1.347008   -0.9065002   1.0384194  ...  0.9311755  -0.88710904
+  -1.0599288 ]
+ [ 0.84580296 -1.3604947   0.8471415  ...  0.95768267 -0.07491717
+   0.32537135]
  ...
- [ 1.2355547  -0.6400209  -0.59921527 ... -0.12730186 -0.3426052
-  -1.1101209 ]
- [ 0.19090153 -0.6523549  -0.4373727  ...  0.8468437   0.49040866
-  -0.14062503]
- [-0.5942377  -0.93374133  0.54625034 ... -0.05576921 -0.9447482
-  -1.1440233 ]]
+ [ 1.4835097   0.13096532  0.63991284 ... -1.166823    0.250414
+  -0.7703706 ]
+ [-0.18388712 -0.7047122   0.49538338 ...  0.26794562 -0.6400709
+   0.57972735]
+ [-0.44166976 -0.5572643  -0.5958953  ... -0.62469536 -0.9879791
+  -0.19887315]]
 </pre></div>
 </div>
 </div>
 </div>
-<p>To prepare the word embeddings for classification, we will add a <code class="docutils literal notranslate"><span class="pre">tensor</span></code> column to both the dataframes for training and testing. Each cell in the <code class="docutils literal notranslate"><span class="pre">tensor</span></code> column should be a tensor array, representing the word embedding vector for the text in the corresponding row. The tensors need to have the same size for both the training and test sets, so we also need to pad the tensors with smaller sizes by adding zeros at the end.</p>
-<div class="cell docutils container">
-<div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">add_padded_tensors</span><span class="p">(</span><span class="n">df1</span><span class="p">,</span> <span class="n">df2</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Add a tensor column to the dataframes, with every tensor having the same dimensions.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    df1 : pandas.DataFrame</span>
-<span class="sd">        The first dataframe containing at least the &quot;tokens&quot; or &quot;doc&quot; column.</span>
-<span class="sd">    df2 : pandas.DataFrame</span>
-<span class="sd">        The second dataframe containing at least the &quot;tokens&quot; or &quot;doc&quot; column.</span>
-
-<span class="sd">    Returns</span>
-<span class="sd">    -------</span>
-<span class="sd">    tuple[pandas.DataFrame]</span>
-<span class="sd">        The dataframes with the added tensor column.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="c1"># Copy the dataframes to avoid editing the originals.</span>
-    <span class="n">df1</span> <span class="o">=</span> <span class="n">df1</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">df2</span> <span class="o">=</span> <span class="n">df2</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-    <span class="c1"># Add tensors (option 1: using the Word2Vec model that we created).</span>
-    <span class="c1">#for df in [df1, df2]:</span>
-    <span class="c1">#    df[&quot;tensor&quot;] = df[&quot;tokens&quot;].apply(</span>
-    <span class="c1">#        lambda tokens: np.vstack([w2v_model.wv[token] for token in tokens])</span>
-    <span class="c1">#    )</span>
-
-    <span class="c1"># Add tensors (option 2: using the spaCy tensors).</span>
-    <span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="p">[</span><span class="n">df1</span><span class="p">,</span> <span class="n">df2</span><span class="p">]:</span>
-        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tensor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;doc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">doc</span><span class="p">:</span> <span class="n">doc</span><span class="o">.</span><span class="n">tensor</span><span class="p">)</span>
-
-    <span class="c1"># Determine the largest amount of columns in both the training and test sets.</span>
-    <span class="n">largest</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">df1</span><span class="p">[</span><span class="s2">&quot;tensor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
-                  <span class="n">df2</span><span class="p">[</span><span class="s2">&quot;tensor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">max</span><span class="p">())</span>
-
-    <span class="c1"># Pad the tensors with zeros so that they have equal size.</span>
-    <span class="k">for</span> <span class="n">df</span> <span class="ow">in</span> <span class="p">[</span><span class="n">df1</span><span class="p">,</span> <span class="n">df2</span><span class="p">]:</span>
-        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tensor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;tensor&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
-            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="n">largest</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)))</span>
-        <span class="p">)</span>
-
-    <span class="k">return</span> <span class="n">df1</span><span class="p">,</span> <span class="n">df2</span>
-</pre></div>
-</div>
-</div>
-</div>
+<p>To prepare the word embeddings for classification, we will add a <code class="docutils literal notranslate"><span class="pre">tensor</span></code> column to both the dataframes for training and testing. Each cell in the <code class="docutils literal notranslate"><span class="pre">tensor</span></code> column should be a tensor array, representing the word embedding vector for the text in the corresponding row. The tensors need to have the same size for both the training and test sets, so we also need to pad the tensors with smaller sizes by adding zeros at the end. We provide a <code class="docutils literal notranslate"><span class="pre">add_padded_tensors</span></code> function in the <a class="reference external" href="#util">utility file</a> for doing this.</p>
 <div class="cell tag_output_scroll docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_train_with_tensor</span><span class="p">,</span> <span class="n">df_test_with_tensor</span> <span class="o">=</span> <span class="n">add_padded_tensors</span><span class="p">(</span><span class="n">df_train_preprocessd</span><span class="p">,</span> <span class="n">df_test_preprocessd</span><span class="p">)</span>
@@ -4197,8 +3649,8 @@ google company say reuters new public najaf share ipo security
       <td>Fears for T N pension after talks Unions repre...</td>
       <td>[Fears, for, T, N, pension, after, talk, Union...</td>
       <td>(Fears, for, T, N, pension, after, talks, Unio...</td>
-      <td>[fear, T, N, pension, talk, Unions, represent,...</td>
-      <td>[[-1.8966789, 1.5618968, -0.4389819, 0.8901441...</td>
+      <td>[fear, t, N, pension, talk, Unions, represent,...</td>
+      <td>[[-0.9206627, 0.7367932, -0.17732513, 1.061838...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -4207,8 +3659,8 @@ google company say reuters new public najaf share ipo security
       <td>The Race is On: Second Private Team Sets Launc...</td>
       <td>[The, Race, be, On, :, Second, Private, Team, ...</td>
       <td>(The, Race, is, On, :, Second, Private, Team, ...</td>
-      <td>[Race, second, private, team, set, Launch, Dat...</td>
-      <td>[[1.0206602, -0.77784187, -0.07053307, 1.81432...</td>
+      <td>[race, Second, private, Team, Sets, Launch, Da...</td>
+      <td>[[0.3289305, -0.659908, -0.04628387, 0.459979,...</td>
     </tr>
     <tr>
       <th>2</th>
@@ -4217,8 +3669,8 @@ google company say reuters new public najaf share ipo security
       <td>Ky. Company Wins Grant to Study Peptides (AP) ...</td>
       <td>[Ky., Company, Wins, Grant, to, Study, Peptide...</td>
       <td>(Ky., Company, Wins, Grant, to, Study, Peptide...</td>
-      <td>[Company, win, Grant, study, Peptides, AP, AP,...</td>
-      <td>[[0.07833788, -0.781985, -0.4735602, 1.2093124...</td>
+      <td>[Company, win, Grant, Study, Peptides, AP, AP,...</td>
+      <td>[[-0.085725844, -1.1698873, 0.5357769, 1.32863...</td>
     </tr>
     <tr>
       <th>3</th>
@@ -4228,7 +3680,7 @@ google company say reuters new public najaf share ipo security
       <td>[Prediction, Unit, Helps, Forecast, Wildfires,...</td>
       <td>(Prediction, Unit, Helps, Forecast, Wildfires,...</td>
       <td>[prediction, Unit, help, Forecast, Wildfires, ...</td>
-      <td>[[-0.17650917, -0.8486336, 0.23646504, 0.21480...</td>
+      <td>[[-0.092530996, -1.1091797, 0.007843953, 0.410...</td>
     </tr>
     <tr>
       <th>4</th>
@@ -4237,8 +3689,8 @@ google company say reuters new public najaf share ipo security
       <td>Calif. Aims to Limit Farm-Related Smog (AP) AP...</td>
       <td>[Calif, ., Aims, to, Limit, Farm-Related, Smog...</td>
       <td>(Calif., Aims, to, Limit, Farm, -, Related, Sm...</td>
-      <td>[aim, limit, Farm, Related, Smog, AP, AP, Sout...</td>
-      <td>[[0.22340375, -0.8782145, -0.6919652, -0.46230...</td>
+      <td>[aim, Limit, Farm, relate, Smog, AP, AP, South...</td>
+      <td>[[-0.10481978, -0.5771505, 1.3032898, 0.098989...</td>
     </tr>
     <tr>
       <th>...</th>
@@ -4258,7 +3710,7 @@ google company say reuters new public najaf share ipo security
       <td>[New, Overtime, Rules, Take, Effect, New, Bush...</td>
       <td>(New, Overtime, Rules, Take, Effect, New, Bush...</td>
       <td>[New, Overtime, Rules, Effect, New, Bush, admi...</td>
-      <td>[[0.020376865, -0.78690255, 0.89715064, 0.7673...</td>
+      <td>[[0.63283896, -0.8598237, 0.18151897, 0.718614...</td>
     </tr>
     <tr>
       <th>479</th>
@@ -4267,8 +3719,8 @@ google company say reuters new public najaf share ipo security
       <td>Dollar Holds Gains, Fed Comments Help  TOKYO (...</td>
       <td>[Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
       <td>(Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
-      <td>[Dollar, hold, Gains, Fed, Comments, help, TOK...</td>
-      <td>[[-1.4306974, -1.2274694, 1.5035357, -0.057243...</td>
+      <td>[Dollar, Holds, Gains, Fed, comment, help, TOK...</td>
+      <td>[[0.27932516, -1.1461885, 0.29283038, 0.256060...</td>
     </tr>
     <tr>
       <th>481</th>
@@ -4278,7 +3730,7 @@ google company say reuters new public najaf share ipo security
       <td>[Dark, art, of, spin, evident, in, phoney, war...</td>
       <td>(Dark, arts, of, spin, evident, in, phoney, wa...</td>
       <td>[dark, art, spin, evident, phoney, war, Abbey,...</td>
-      <td>[[-0.59349465, -1.1670003, -0.48161936, 0.4895...</td>
+      <td>[[0.6209623, -0.8559445, -0.29310828, 0.090776...</td>
     </tr>
     <tr>
       <th>482</th>
@@ -4288,7 +3740,7 @@ google company say reuters new public najaf share ipo security
       <td>[Controversial, US, Overtime, Rules, Take, Eff...</td>
       <td>(Controversial, US, Overtime, Rules, Take, Eff...</td>
       <td>[controversial, Overtime, Rules, Effect, new, ...</td>
-      <td>[[-0.32088518, -0.23858789, -0.5674784, 1.7897...</td>
+      <td>[[0.19809127, -0.7492492, 0.23203318, 0.294419...</td>
     </tr>
     <tr>
       <th>484</th>
@@ -4298,7 +3750,7 @@ google company say reuters new public najaf share ipo security
       <td>[SAS, Braathens, to, cut, Gatwick, ,, Geneva, ...</td>
       <td>(SAS, Braathens, to, cut, Gatwick, ,, Geneva, ...</td>
       <td>[SAS, Braathens, cut, Gatwick, Geneva, flight,...</td>
-      <td>[[-1.0833734, -1.1490844, 0.7710656, 0.3060569...</td>
+      <td>[[-0.34229928, -0.94983363, 0.3551279, 0.64431...</td>
     </tr>
   </tbody>
 </table>
@@ -4391,11 +3843,11 @@ If you want to run the code faster, you can also put this notebook on Google Col
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Epoch [1/5], Loss: 1.3814
-Epoch [2/5], Loss: 1.2614
-Epoch [3/5], Loss: 0.8655
-Epoch [4/5], Loss: 0.7708
-Epoch [5/5], Loss: 0.7529
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Epoch [1/5], Loss: 1.3852
+Epoch [2/5], Loss: 1.3765
+Epoch [3/5], Loss: 1.3249
+Epoch [4/5], Loss: 1.0777
+Epoch [5/5], Loss: 0.8335
 </pre></div>
 </div>
 </div>
@@ -4431,7 +3883,7 @@ Epoch [5/5], Loss: 0.7529
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/tutorial-text-data_139_0.png" src="../_images/tutorial-text-data_139_0.png" />
+<img alt="../_images/tutorial-text-data_135_0.png" src="../_images/tutorial-text-data_135_0.png" />
 </div>
 </div>
 <p>If you do not feel done with text data yet, there is always more to do. In this optional assignment, you can experiment with the number of epochs, learning rate, vector size, optimizer, neural network architecture, regularization, etc. Also, we only use a small subset of this dataset for performance issues. If you have a high-end computer, you can go to the beginning of this tutorial to increase the size of the subset.</p>
@@ -4445,6 +3897,12 @@ Epoch [5/5], Loss: 0.7529
 </section>
 </section>
 </section>
+
+
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {"0c7b72d364c44540a11c5367ebce9923": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "0e59296785514778850fdb3aab855d68": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "103a910c98584ecbada337b2abe5c594": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_3c8b2e312ecd4955a2c3ab4fd8ae90dd", "style": "IPY_MODEL_6a9ed1caf1a24a30802a87a75cb7f778", "value": "\u20074000/4000\u2007[00:03&lt;00:00,\u20071186.35it/s]"}}, "141c807c083949a787e128addac83989": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "157e6363610947359e1e6ccca2712484": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_8c4664ec974242578242167359e8181e", "style": "IPY_MODEL_9b37ddae28c6442c8c0b09faefadd98c", "value": "100%"}}, "15a088c050e441febe52e15da46299d4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "18d5a1916daf4b4c9783c45a69fff4fb": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "1a5e511692374aee827d8627e4f3dbbf": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "ProgressStyleModel", "state": {"description_width": ""}}, "1d33ba86162640228caf6a58d7cc60a8": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "1f42f03e02bd42e9826a7c1b965e718f": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "FloatProgressModel", "state": {"bar_style": "success", "layout": "IPY_MODEL_18d5a1916daf4b4c9783c45a69fff4fb", "max": 400, "style": "IPY_MODEL_2a03099d0c5449e5a735a073b9a1d133", "value": 400}}, "2608fb2dd6ff4de392a56093956bd243": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "FloatProgressModel", "state": {"bar_style": "success", "layout": "IPY_MODEL_f164dddd2c1d4600a798105ea207df78", "max": 4000, "style": "IPY_MODEL_337c6dbaaad644dda3d9c77a5625d2a5", "value": 4000}}, "2a03099d0c5449e5a735a073b9a1d133": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "ProgressStyleModel", "state": {"description_width": ""}}, "2c9ebaa32e6a41cab7bc7db0482bb874": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "ProgressStyleModel", "state": {"description_width": ""}}, "337c6dbaaad644dda3d9c77a5625d2a5": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "ProgressStyleModel", "state": {"description_width": ""}}, "363a1a3b45ff4d2cade6a379b02325a0": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_5f2fa5291b224dafbe1758bbd1951601", "style": "IPY_MODEL_b0f50cc817c64862b8ade40e6a7f4ae0", "value": "100%"}}, "39d20f81f4e544c79cca4b262eba7e75": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_ed389fad84ed492f9da2efa34785cdbb", "style": "IPY_MODEL_b7cee821814a4dc0bdbe79676a6a9c33", "value": "\u20074000/4000\u2007[00:10&lt;00:00,\u20071930.87it/s]"}}, "3a5ab214cd9044ef8f68a89bd3da026d": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "3ac9958bde9e4872a0237ba6126fcc40": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_86767bd5218d4c2e9fcaaf1a2df5527f", "style": "IPY_MODEL_141c807c083949a787e128addac83989", "value": "\u2007400/400\u2007[00:07&lt;00:00,\u200750.87it/s]"}}, "3af85f08c9804f7daa60baeaeb773003": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "3c8b2e312ecd4955a2c3ab4fd8ae90dd": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "3cd1298fafd3439890fbed293efc9469": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_3a5ab214cd9044ef8f68a89bd3da026d", "style": "IPY_MODEL_3af85f08c9804f7daa60baeaeb773003", "value": "100%"}}, "432175215eee4460af3f6cff58003f23": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_56dff3aff8384d5bb63a83f60e3cad20", "style": "IPY_MODEL_d94ade76261442e7bba403ac90001d39", "value": "\u2007400/400\u2007[00:00&lt;00:00,\u20076711.61it/s]"}}, "51ef1d2a3c6f47cfb353825febb5ec61": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "56dff3aff8384d5bb63a83f60e3cad20": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "5897f0dc6aea48b78b6dcc41757a3f17": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_d142439dbde142c98f24233f7f4a76d6", "IPY_MODEL_6c4ff968839d465d801ec7e314be06fe", "IPY_MODEL_3ac9958bde9e4872a0237ba6126fcc40"], "layout": "IPY_MODEL_9a5fe12404574157948867a0a69553ad"}}, "58e4815d63ba49489174f1b2608c0cd4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_0e59296785514778850fdb3aab855d68", "style": "IPY_MODEL_dbbc4c4fb45b423dbc9f50b95b825005", "value": "100%"}}, "59a14778dc1447498ad6f3aed45b1c77": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "ProgressStyleModel", "state": {"description_width": ""}}, "5dfca482b7e141e69d5f9c9dbbf2e511": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "5f2fa5291b224dafbe1758bbd1951601": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "60d059cd08a4463a91d825fa95960090": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_c757948be999435cbd342363f3509b3a", "style": "IPY_MODEL_f2b8915670c04cb8a478faf364486581", "value": "\u20074000/4000\u2007[00:00&lt;00:00,\u20078787.82it/s]"}}, "64a5d31398024a208a6633ef30dd9a32": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "FloatProgressModel", "state": {"bar_style": "success", "layout": "IPY_MODEL_cb5067c9aca74cdfa617231a6a21009b", "max": 4000, "style": "IPY_MODEL_2c9ebaa32e6a41cab7bc7db0482bb874", "value": 4000}}, "674073f247e8482580b7b75479f70c3d": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "6a07866f45b04c3999d8b63cea2c587e": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "6a9ed1caf1a24a30802a87a75cb7f778": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "6c4ff968839d465d801ec7e314be06fe": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "FloatProgressModel", "state": {"bar_style": "success", "layout": "IPY_MODEL_6ced1bf4352840c29d8c614798e09b5a", "max": 400, "style": "IPY_MODEL_1a5e511692374aee827d8627e4f3dbbf", "value": 400}}, "6ced1bf4352840c29d8c614798e09b5a": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "7a3dd94774524cb79073959f31b47a37": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "7c0ce75d9072407eb37fb8ac366051a6": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_58e4815d63ba49489174f1b2608c0cd4", "IPY_MODEL_1f42f03e02bd42e9826a7c1b965e718f", "IPY_MODEL_432175215eee4460af3f6cff58003f23"], "layout": "IPY_MODEL_6a07866f45b04c3999d8b63cea2c587e"}}, "8195b661d3b3494ca07a7ba40b53ab0d": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "86767bd5218d4c2e9fcaaf1a2df5527f": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "8c4664ec974242578242167359e8181e": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "93c084a874054aac9d37dfe431c1c9d4": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_363a1a3b45ff4d2cade6a379b02325a0", "IPY_MODEL_a9ace5b6bd22456b9a64816f69817361", "IPY_MODEL_a056978e9efa4fff9f117cce58efdc27"], "layout": "IPY_MODEL_7a3dd94774524cb79073959f31b47a37"}}, "94f0f5ec75a84407b4df60bcde2fd6fe": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "97b56ab6417b49d7b677c3bfa135fe33": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "FloatProgressModel", "state": {"bar_style": "success", "layout": "IPY_MODEL_d190386b7b60415ebfd538917402453f", "max": 4000, "style": "IPY_MODEL_b54c286fe37a4705a056058a10ad7a15", "value": 4000}}, "9a5fe12404574157948867a0a69553ad": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "9b37ddae28c6442c8c0b09faefadd98c": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "a056978e9efa4fff9f117cce58efdc27": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_5dfca482b7e141e69d5f9c9dbbf2e511", "style": "IPY_MODEL_15a088c050e441febe52e15da46299d4", "value": "\u2007400/400\u2007[00:00&lt;00:00,\u20071099.50it/s]"}}, "a9ace5b6bd22456b9a64816f69817361": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "FloatProgressModel", "state": {"bar_style": "success", "layout": "IPY_MODEL_0c7b72d364c44540a11c5367ebce9923", "max": 400, "style": "IPY_MODEL_59a14778dc1447498ad6f3aed45b1c77", "value": 400}}, "adc2f2c5e39741b8924fcfd101159c86": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_b7899a179676475785375b6a55c49732", "IPY_MODEL_64a5d31398024a208a6633ef30dd9a32", "IPY_MODEL_60d059cd08a4463a91d825fa95960090"], "layout": "IPY_MODEL_e3527ed92aa94207b5b2c91dfba5b039"}}, "b0f50cc817c64862b8ade40e6a7f4ae0": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "b54c286fe37a4705a056058a10ad7a15": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "ProgressStyleModel", "state": {"description_width": ""}}, "b7899a179676475785375b6a55c49732": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_8195b661d3b3494ca07a7ba40b53ab0d", "style": "IPY_MODEL_1d33ba86162640228caf6a58d7cc60a8", "value": "100%"}}, "b7cee821814a4dc0bdbe79676a6a9c33": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "c03ada6ea4e24483805124f8a00b7df1": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_3cd1298fafd3439890fbed293efc9469", "IPY_MODEL_2608fb2dd6ff4de392a56093956bd243", "IPY_MODEL_39d20f81f4e544c79cca4b262eba7e75"], "layout": "IPY_MODEL_94f0f5ec75a84407b4df60bcde2fd6fe"}}, "c757948be999435cbd342363f3509b3a": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "cb5067c9aca74cdfa617231a6a21009b": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "d142439dbde142c98f24233f7f4a76d6": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HTMLModel", "state": {"layout": "IPY_MODEL_51ef1d2a3c6f47cfb353825febb5ec61", "style": "IPY_MODEL_fbda4bacd9bc4988beb9356a00140a5b", "value": "100%"}}, "d190386b7b60415ebfd538917402453f": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "d94ade76261442e7bba403ac90001d39": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "dbbc4c4fb45b423dbc9f50b95b825005": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "e3527ed92aa94207b5b2c91dfba5b039": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "ed389fad84ed492f9da2efa34785cdbb": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "ed5c609a458e4c119b914b5145a2de28": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "HBoxModel", "state": {"children": ["IPY_MODEL_157e6363610947359e1e6ccca2712484", "IPY_MODEL_97b56ab6417b49d7b677c3bfa135fe33", "IPY_MODEL_103a910c98584ecbada337b2abe5c594"], "layout": "IPY_MODEL_674073f247e8482580b7b75479f70c3d"}}, "f164dddd2c1d4600a798105ea207df78": {"model_module": "@jupyter-widgets/base", "model_module_version": "1.2.0", "model_name": "LayoutModel", "state": {}}, "f2b8915670c04cb8a478faf364486581": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}, "fbda4bacd9bc4988beb9356a00140a5b": {"model_module": "@jupyter-widgets/controls", "model_module_version": "1.5.0", "model_name": "DescriptionStyleModel", "state": {"description_width": ""}}}, "version_major": 2, "version_minor": 0}
+</script>
+
 
     <script type="text/x-thebe-config">
     {

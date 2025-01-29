@@ -12,3 +12,7 @@ parts:
     title: "Tutorial"
   - file: docs/assignment-text-data
     title: "Assignment"
+  - file: docs/answer
+    title: "Task Answers"
+  - file: docs/util
+    title: "Utility Functions"
