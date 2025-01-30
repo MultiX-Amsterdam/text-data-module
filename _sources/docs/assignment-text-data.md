@@ -13,7 +13,7 @@
 Follow the steps below to set up the assignment:
 - Have the [JupyterLab](https://jupyter.org/install) environment ready.
 - Download the text data processing module from the [GitHub repository](https://github.com/MultiX-Amsterdam/text-data-module). Or you can also download the zip file from [this link](https://github.com/MultiX-Amsterdam/text-data-module/archive/refs/heads/main.zip).
-- Open the notebook file and start doing the assignment.
+- Open the notebook file (`docs/tutorial-text-data.ipynb`) and start doing the assignment.
 
 Follow the steps below to do the assignment:
 - Complete the assignments that are indicated in the tutorial notebook. You can leave out the optional assignment if it is too difficult or takes too much time.
