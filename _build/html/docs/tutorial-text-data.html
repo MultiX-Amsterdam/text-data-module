@@ -576,7 +576,7 @@ title="Print to PDF"
                 
   <section class="tex2jax_ignore mathjax_ignore" id="tutorial-text-data-processing">
 <h1>Tutorial (Text Data Processing)<a class="headerlink" href="#tutorial-text-data-processing" title="Permalink to this headline">#</a></h1>
-<p>(Last updated: Jan 29, 2025)<a class="footnote-reference brackets" href="#credit" id="id1">1</a></p>
+<p>(Last updated: Sep 30, 2025)<a class="footnote-reference brackets" href="#credit" id="id1">1</a></p>
 <p>This tutorial will familiarize you with the data science pipeline of processing text data. We will go through the various steps involved in the Natural Language Processing (NLP) pipeline for topic modelling and topic classification, including tokenization, lemmatization, and obtaining word embeddings. We will also build a neural network using PyTorch for multi-class topic classification using the dataset.</p>
 <p>The AG’s News Topic Classification Dataset contains news articles from four different categories, making it a nice source of text data for NLP tasks. We will guide you through the process of understanding the dataset, implementing various NLP techniques, and building a model for classification.</p>
 <p>You can use the following links to jump to the tasks and assignments:</p>
@@ -626,6 +626,7 @@ title="Print to PDF"
 <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
 
 <span class="kn">import</span> <span class="nn">spacy</span>
+<span class="kn">from</span> <span class="nn">spacy.language</span> <span class="kn">import</span> <span class="n">Language</span>
 
 <span class="kn">import</span> <span class="nn">torch</span>
 <span class="kn">import</span> <span class="nn">torch.nn</span> <span class="k">as</span> <span class="nn">nn</span>
@@ -671,6 +672,7 @@ title="Print to PDF"
     <span class="n">wordnet_pos</span><span class="p">,</span>
     <span class="n">reformat_data</span><span class="p">,</span>
     <span class="n">visualize_word_counts</span><span class="p">,</span>
+    <span class="n">lowercase_text</span><span class="p">,</span>
     <span class="n">add_spacy_doc</span><span class="p">,</span>
     <span class="n">add_spacy_tokens</span><span class="p">,</span>
     <span class="n">add_padded_tensors</span>
@@ -713,11 +715,13 @@ title="Print to PDF"
 </div>
 </div>
 </div>
-<p>For performance reasons, we will only use a small subset of this dataset.</p>
+<p>For performance reasons, we will only use a small subset of this dataset for training and testing. If you have a powerful computer, please feel free to adjust the <code class="docutils literal notranslate"><span class="pre">train_size</span></code> and <code class="docutils literal notranslate"><span class="pre">test_size</span></code> parameters.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
-<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_train</span> <span class="o">=</span> <span class="n">df_train</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;Class Index&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">1000</span><span class="p">)</span>
-<span class="n">df_test</span> <span class="o">=</span> <span class="n">df_test</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;Class Index&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">train_size</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">test_size</span> <span class="o">=</span> <span class="mi">100</span>
+<span class="n">df_train</span> <span class="o">=</span> <span class="n">df_train</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;Class Index&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">train_size</span><span class="p">)</span>
+<span class="n">df_test</span> <span class="o">=</span> <span class="n">df_test</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;Class Index&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="n">test_size</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1193,9 +1197,9 @@ Lemmatized text: [&#39;The&#39;, &#39;quick&#39;, &#39;brown&#39;, &#39;fox&#39;
 </div>
 <div class="cell_output docutils container">
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "adc2f2c5e39741b8924fcfd101159c86", "version_major": 2, "version_minor": 0}
+{"model_id": "306a01542d4a4c82811fd5cdcf91c3e3", "version_major": 2, "version_minor": 0}
 </script><script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "ed5c609a458e4c119b914b5145a2de28", "version_major": 2, "version_minor": 0}
+{"model_id": "0d84ecd299b647d4853d696445aa7d0a", "version_major": 2, "version_minor": 0}
 </script><div class="output text_html"><div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -1614,7 +1618,7 @@ Expected output is:
 <div class="cell tag_output_scroll docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">word_counts</span> <span class="o">=</span> <span class="n">get_word_counts</span><span class="p">(</span><span class="n">df_with_tokens</span><span class="p">,</span> <span class="n">token_col</span><span class="o">=</span><span class="s2">&quot;tokens&quot;</span><span class="p">)</span>
-<span class="n">check_answer_df</span><span class="p">(</span><span class="n">answer_word_counts</span><span class="p">,</span> <span class="n">word_counts</span><span class="p">)</span>
+<span class="n">check_answer_df</span><span class="p">(</span><span class="n">word_counts</span><span class="p">,</span> <span class="n">answer_word_counts</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -1622,6 +1626,9 @@ Expected output is:
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Test case 1 failed.
 
 Your output is:
+None
+
+Expected output is:
           class      tokens  count
 3541   Business         the   1460
 0      Business           a   1217
@@ -1636,9 +1643,6 @@ Your output is:
 19265     World  zimbabwean      1
 
 [19268 rows x 3 columns]
-
-Expected output is:
-None
 </pre></div>
 </div>
 </div>
@@ -1912,7 +1916,7 @@ Expected output is:
 <li><p><a class="reference external" href="https://spacy.io/api/doc"><code class="docutils literal notranslate"><span class="pre">Doc</span></code></a>: A container for accessing linguistic annotations like tokens, part-of-speech tags, named entities, and dependency parse information. It is created by the <code class="docutils literal notranslate"><span class="pre">nlp</span></code> function and represents a processed document.</p></li>
 <li><p><a class="reference external" href="https://spacy.io/api/token"><code class="docutils literal notranslate"><span class="pre">Token</span></code></a>: An object representing a single token in a <code class="docutils literal notranslate"><span class="pre">Doc</span></code> object. It contains information like the token text, part-of-speech tag, lemma, embedding, and much more.</p></li>
 </ul>
-<p>When a text is processed by spaCy, it is first passed to the <code class="docutils literal notranslate"><span class="pre">nlp</span></code> function, which uses the loaded model to tokenize the text and applies various linguistic annotations like part-of-speech tagging, named entity recognition, and dependency parsing in the background. The resulting annotations are stored in a <code class="docutils literal notranslate"><span class="pre">Doc</span></code> object, which can be accessed and manipulated using various methods and attributes.</p>
+<p>When a text is processed by spaCy, it is first passed to the <code class="docutils literal notranslate"><span class="pre">nlp</span></code> function, which uses the loaded model to tokenize the text and applies various linguistic annotations like lemmatization in the background. Notice that we add an additional <code class="docutils literal notranslate"><span class="pre">lowercase_text</span></code> function in the <a class="reference external" href="#util">utility file</a> to the pipeline at the beginning to ensure that all tokens are in lowercase.</p>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
 <div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Load the small English model in spaCy.</span>
@@ -1921,7 +1925,23 @@ Expected output is:
 <span class="c1"># - https://spacy.io/usage/processing-pipelines</span>
 <span class="n">nlp</span> <span class="o">=</span> <span class="n">spacy</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s2">&quot;en_core_web_sm&quot;</span><span class="p">,</span> <span class="n">disable</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;parser&quot;</span><span class="p">,</span> <span class="s2">&quot;ner&quot;</span><span class="p">])</span>
 
-<span class="c1"># Process the text using spaCy.</span>
+<span class="c1"># Add at the beginning of the pipeline</span>
+<span class="n">nlp</span><span class="o">.</span><span class="n">add_pipe</span><span class="p">(</span><span class="s2">&quot;lowercase_text&quot;</span><span class="p">,</span> <span class="n">first</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">nlp</span><span class="o">.</span><span class="n">pipe_names</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="cell_output docutils container">
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[&#39;lowercase_text&#39;, &#39;tok2vec&#39;, &#39;tagger&#39;, &#39;attribute_ruler&#39;, &#39;lemmatizer&#39;]
+</pre></div>
+</div>
+</div>
+</div>
+<p>Now we can run the pipeline. The resulting annotations are stored in a <code class="docutils literal notranslate"><span class="pre">Doc</span></code> object, which can be accessed and manipulated using various methods and attributes.</p>
+<div class="cell docutils container">
+<div class="cell_input docutils container">
+<div class="highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Process the text using spaCy.</span>
 <span class="n">doc</span> <span class="o">=</span> <span class="n">nlp</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
 
 <span class="c1"># This becomes a spaCy Doc object, which prints nicely as the original string.</span>
@@ -1930,7 +1950,7 @@ Expected output is:
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>The quick brown fox jumped over the lazy dog. The cats couldn&#39;t wait to sleep all day.
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>the quick brown fox jumped over the lazy dog . the cats could n&#39;t wait to sleep all day . 
 </pre></div>
 </div>
 </div>
@@ -1970,7 +1990,7 @@ Expected output is:
   <tbody>
     <tr>
       <th>0</th>
-      <td>The</td>
+      <td>the</td>
       <td>the</td>
       <td>True</td>
     </tr>
@@ -2030,7 +2050,7 @@ Expected output is:
     </tr>
     <tr>
       <th>10</th>
-      <td>The</td>
+      <td>the</td>
       <td>the</td>
       <td>True</td>
     </tr>
@@ -2102,7 +2122,7 @@ Expected output is:
 </div>
 <div class="cell_output docutils container">
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "c03ada6ea4e24483805124f8a00b7df1", "version_major": 2, "version_minor": 0}
+{"model_id": "a73bc0a56e4849bd891de977a9de1b4a", "version_major": 2, "version_minor": 0}
 </script><div class="output text_html"><div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -2135,7 +2155,7 @@ Expected output is:
       <td>Business</td>
       <td>Wall St. Bears Claw Back Into the Black (Reute...</td>
       <td>[Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
-      <td>(Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
+      <td>(wall, st., bears, claw, back, into, the, blac...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -2143,7 +2163,7 @@ Expected output is:
       <td>Business</td>
       <td>Carlyle Looks Toward Commercial Aerospace (Reu...</td>
       <td>[Carlyle, Looks, Toward, Commercial, Aerospace...</td>
-      <td>(Carlyle, Looks, Toward, Commercial, Aerospace...</td>
+      <td>(carlyle, looks, toward, commercial, aerospace...</td>
     </tr>
     <tr>
       <th>2</th>
@@ -2151,7 +2171,7 @@ Expected output is:
       <td>Business</td>
       <td>Oil and Economy Cloud Stocks' Outlook (Reuters...</td>
       <td>[Oil, and, Economy, Cloud, Stocks, ', Outlook,...</td>
-      <td>(Oil, and, Economy, Cloud, Stocks, ', Outlook,...</td>
+      <td>(oil, and, economy, cloud, stocks, ', outlook,...</td>
     </tr>
     <tr>
       <th>3</th>
@@ -2159,7 +2179,7 @@ Expected output is:
       <td>Business</td>
       <td>Iraq Halts Oil Exports from Main Southern Pipe...</td>
       <td>[Iraq, Halts, Oil, Exports, from, Main, Southe...</td>
-      <td>(Iraq, Halts, Oil, Exports, from, Main, Southe...</td>
+      <td>(iraq, halts, oil, exports, from, main, southe...</td>
     </tr>
     <tr>
       <th>4</th>
@@ -2167,7 +2187,7 @@ Expected output is:
       <td>Business</td>
       <td>Oil prices soar to all-time record, posing new...</td>
       <td>[Oil, price, soar, to, all-time, record, ,, po...</td>
-      <td>(Oil, prices, soar, to, all, -, time, record, ...</td>
+      <td>(oil, prices, soar, to, all, -, time, record, ...</td>
     </tr>
     <tr>
       <th>...</th>
@@ -2183,7 +2203,7 @@ Expected output is:
       <td>Sports</td>
       <td>IOA sets up committee to probe dope scandal At...</td>
       <td>[IOA, set, up, committee, to, probe, dope, sca...</td>
-      <td>(IOA, sets, up, committee, to, probe, dope, sc...</td>
+      <td>(ioa, sets, up, committee, to, probe, dope, sc...</td>
     </tr>
     <tr>
       <th>4866</th>
@@ -2191,7 +2211,7 @@ Expected output is:
       <td>Sports</td>
       <td>FACTBOX-Jonathan Woodgate factbox MADRID, Aug ...</td>
       <td>[FACTBOX-Jonathan, Woodgate, factbox, MADRID, ...</td>
-      <td>(FACTBOX, -, Jonathan, Woodgate, factbox, MADR...</td>
+      <td>(factbox, -, jonathan, woodgate, factbox, madr...</td>
     </tr>
     <tr>
       <th>4867</th>
@@ -2199,7 +2219,7 @@ Expected output is:
       <td>Sports</td>
       <td>British canoe pair lose out ATHENS (Reuters) -...</td>
       <td>[British, canoe, pair, lose, out, ATHENS, (, R...</td>
-      <td>(British, canoe, pair, lose, out, ATHENS, (, R...</td>
+      <td>(british, canoe, pair, lose, out, athens, (, r...</td>
     </tr>
     <tr>
       <th>4895</th>
@@ -2207,7 +2227,7 @@ Expected output is:
       <td>Sports</td>
       <td>U.S. Softball Team Posts Shutout No. 7 (AP) AP...</td>
       <td>[U.S., Softball, Team, Posts, Shutout, No, ., ...</td>
-      <td>(U.S., Softball, Team, Posts, Shutout, No, ., ...</td>
+      <td>(u.s., softball, team, posts, shutout, no, ., ...</td>
     </tr>
     <tr>
       <th>4896</th>
@@ -2215,7 +2235,7 @@ Expected output is:
       <td>Sports</td>
       <td>Paul Hamm's example PAUL HAMM'S fall and rise ...</td>
       <td>[Paul, Hamm, 's, example, PAUL, HAMM, 'S, fall...</td>
-      <td>(Paul, Hamm, 's, example, PAUL, HAMM, 'S, fall...</td>
+      <td>(paul, hamm, 's, example, paul, hamm, 's, fall...</td>
     </tr>
   </tbody>
 </table>
@@ -2264,8 +2284,8 @@ Expected output is:
       <td>Business</td>
       <td>Wall St. Bears Claw Back Into the Black (Reute...</td>
       <td>[Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
-      <td>(Wall, St., Bears, Claw, Back, Into, the, Blac...</td>
-      <td>[Wall, Bears, Claw, Black, Reuters, Reuters, s...</td>
+      <td>(wall, st., bears, claw, back, into, the, blac...</td>
+      <td>[wall, bear, claw, black, reuters, reuter, sho...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -2273,8 +2293,8 @@ Expected output is:
       <td>Business</td>
       <td>Carlyle Looks Toward Commercial Aerospace (Reu...</td>
       <td>[Carlyle, Looks, Toward, Commercial, Aerospace...</td>
-      <td>(Carlyle, Looks, Toward, Commercial, Aerospace...</td>
-      <td>[Carlyle, look, Commercial, Aerospace, Reuters...</td>
+      <td>(carlyle, looks, toward, commercial, aerospace...</td>
+      <td>[carlyle, look, commercial, aerospace, reuter,...</td>
     </tr>
     <tr>
       <th>2</th>
@@ -2282,8 +2302,8 @@ Expected output is:
       <td>Business</td>
       <td>Oil and Economy Cloud Stocks' Outlook (Reuters...</td>
       <td>[Oil, and, Economy, Cloud, Stocks, ', Outlook,...</td>
-      <td>(Oil, and, Economy, Cloud, Stocks, ', Outlook,...</td>
-      <td>[oil, Economy, Cloud, Stocks, Outlook, Reuters...</td>
+      <td>(oil, and, economy, cloud, stocks, ', outlook,...</td>
+      <td>[oil, economy, cloud, stock, outlook, reuters,...</td>
     </tr>
     <tr>
       <th>3</th>
@@ -2291,8 +2311,8 @@ Expected output is:
       <td>Business</td>
       <td>Iraq Halts Oil Exports from Main Southern Pipe...</td>
       <td>[Iraq, Halts, Oil, Exports, from, Main, Southe...</td>
-      <td>(Iraq, Halts, Oil, Exports, from, Main, Southe...</td>
-      <td>[Iraq, Halts, Oil, Exports, Main, Southern, Pi...</td>
+      <td>(iraq, halts, oil, exports, from, main, southe...</td>
+      <td>[iraq, halt, oil, export, main, southern, pipe...</td>
     </tr>
     <tr>
       <th>4</th>
@@ -2300,7 +2320,7 @@ Expected output is:
       <td>Business</td>
       <td>Oil prices soar to all-time record, posing new...</td>
       <td>[Oil, price, soar, to, all-time, record, ,, po...</td>
-      <td>(Oil, prices, soar, to, all, -, time, record, ...</td>
+      <td>(oil, prices, soar, to, all, -, time, record, ...</td>
       <td>[oil, price, soar, time, record, pose, new, me...</td>
     </tr>
     <tr>
@@ -2318,8 +2338,8 @@ Expected output is:
       <td>Sports</td>
       <td>IOA sets up committee to probe dope scandal At...</td>
       <td>[IOA, set, up, committee, to, probe, dope, sca...</td>
-      <td>(IOA, sets, up, committee, to, probe, dope, sc...</td>
-      <td>[IOA, set, committee, probe, dope, scandal, At...</td>
+      <td>(ioa, sets, up, committee, to, probe, dope, sc...</td>
+      <td>[ioa, set, committee, probe, dope, scandal, at...</td>
     </tr>
     <tr>
       <th>4866</th>
@@ -2327,8 +2347,8 @@ Expected output is:
       <td>Sports</td>
       <td>FACTBOX-Jonathan Woodgate factbox MADRID, Aug ...</td>
       <td>[FACTBOX-Jonathan, Woodgate, factbox, MADRID, ...</td>
-      <td>(FACTBOX, -, Jonathan, Woodgate, factbox, MADR...</td>
-      <td>[FACTBOX, Jonathan, Woodgate, factbox, MADRID,...</td>
+      <td>(factbox, -, jonathan, woodgate, factbox, madr...</td>
+      <td>[factbox, jonathan, woodgate, factbox, madrid,...</td>
     </tr>
     <tr>
       <th>4867</th>
@@ -2336,8 +2356,8 @@ Expected output is:
       <td>Sports</td>
       <td>British canoe pair lose out ATHENS (Reuters) -...</td>
       <td>[British, canoe, pair, lose, out, ATHENS, (, R...</td>
-      <td>(British, canoe, pair, lose, out, ATHENS, (, R...</td>
-      <td>[british, canoe, pair, lose, ATHENS, Reuters, ...</td>
+      <td>(british, canoe, pair, lose, out, athens, (, r...</td>
+      <td>[british, canoe, pair, lose, athens, reuter, s...</td>
     </tr>
     <tr>
       <th>4895</th>
@@ -2345,8 +2365,8 @@ Expected output is:
       <td>Sports</td>
       <td>U.S. Softball Team Posts Shutout No. 7 (AP) AP...</td>
       <td>[U.S., Softball, Team, Posts, Shutout, No, ., ...</td>
-      <td>(U.S., Softball, Team, Posts, Shutout, No, ., ...</td>
-      <td>[Softball, Team, Posts, Shutout, AP, AP, Cat, ...</td>
+      <td>(u.s., softball, team, posts, shutout, no, ., ...</td>
+      <td>[softball, team, post, shutout, ap, ap, cat, o...</td>
     </tr>
     <tr>
       <th>4896</th>
@@ -2354,8 +2374,8 @@ Expected output is:
       <td>Sports</td>
       <td>Paul Hamm's example PAUL HAMM'S fall and rise ...</td>
       <td>[Paul, Hamm, 's, example, PAUL, HAMM, 'S, fall...</td>
-      <td>(Paul, Hamm, 's, example, PAUL, HAMM, 'S, fall...</td>
-      <td>[Paul, Hamm, example, PAUL, HAMM, fall, rise, ...</td>
+      <td>(paul, hamm, 's, example, paul, hamm, 's, fall...</td>
+      <td>[paul, hamm, example, paul, hamm, fall, rise, ...</td>
     </tr>
   </tbody>
 </table>
@@ -2396,124 +2416,124 @@ Expected output is:
   </thead>
   <tbody>
     <tr>
-      <th>2793</th>
+      <th>2640</th>
       <td>Business</td>
       <td>reuters</td>
-      <td>483</td>
+      <td>350</td>
     </tr>
     <tr>
-      <th>2563</th>
+      <th>2424</th>
       <td>Business</td>
       <td>price</td>
-      <td>317</td>
+      <td>327</td>
     </tr>
     <tr>
-      <th>2240</th>
+      <th>2117</th>
       <td>Business</td>
       <td>new</td>
       <td>298</td>
     </tr>
     <tr>
-      <th>2880</th>
-      <td>Business</td>
-      <td>say</td>
-      <td>287</td>
-    </tr>
-    <tr>
-      <th>2299</th>
+      <th>2175</th>
       <td>Business</td>
       <td>oil</td>
       <td>281</td>
     </tr>
     <tr>
-      <th>3931</th>
+      <th>647</th>
+      <td>Business</td>
+      <td>company</td>
+      <td>220</td>
+    </tr>
+    <tr>
+      <th>3712</th>
       <td>Sci/Tech</td>
       <td>ap</td>
       <td>236</td>
     </tr>
     <tr>
-      <th>6774</th>
+      <th>6391</th>
       <td>Sci/Tech</td>
       <td>new</td>
       <td>226</td>
     </tr>
     <tr>
-      <th>7739</th>
-      <td>Sci/Tech</td>
-      <td>say</td>
-      <td>161</td>
-    </tr>
-    <tr>
-      <th>4625</th>
+      <th>4360</th>
       <td>Sci/Tech</td>
       <td>company</td>
-      <td>140</td>
+      <td>141</td>
     </tr>
     <tr>
-      <th>6584</th>
+      <th>6213</th>
       <td>Sci/Tech</td>
       <td>microsoft</td>
       <td>124</td>
     </tr>
     <tr>
-      <th>9178</th>
+      <th>8401</th>
+      <td>Sci/Tech</td>
+      <td>year</td>
+      <td>115</td>
+    </tr>
+    <tr>
+      <th>11126</th>
       <td>Sports</td>
-      <td>athens</td>
+      <td>olympic</td>
       <td>356</td>
     </tr>
     <tr>
-      <th>9112</th>
+      <th>8646</th>
+      <td>Sports</td>
+      <td>athens</td>
+      <td>344</td>
+    </tr>
+    <tr>
+      <th>8580</th>
       <td>Sports</td>
       <td>ap</td>
       <td>315</td>
     </tr>
     <tr>
-      <th>11775</th>
-      <td>Sports</td>
-      <td>olympic</td>
-      <td>262</td>
-    </tr>
-    <tr>
-      <th>13447</th>
+      <th>12722</th>
       <td>Sports</td>
       <td>win</td>
-      <td>233</td>
+      <td>261</td>
     </tr>
     <tr>
-      <th>10642</th>
+      <th>9975</th>
       <td>Sports</td>
-      <td>gold</td>
-      <td>212</td>
+      <td>game</td>
+      <td>213</td>
     </tr>
     <tr>
-      <th>17110</th>
-      <td>World</td>
-      <td>say</td>
-      <td>294</td>
-    </tr>
-    <tr>
-      <th>16967</th>
-      <td>World</td>
-      <td>reuters</td>
-      <td>276</td>
-    </tr>
-    <tr>
-      <th>13728</th>
+      <th>12991</th>
       <td>World</td>
       <td>ap</td>
       <td>261</td>
     </tr>
     <tr>
-      <th>16185</th>
+      <th>16059</th>
+      <td>World</td>
+      <td>reuters</td>
+      <td>177</td>
+    </tr>
+    <tr>
+      <th>15319</th>
       <td>World</td>
       <td>najaf</td>
       <td>157</td>
     </tr>
     <tr>
-      <th>13622</th>
+      <th>12890</th>
       <td>World</td>
       <td>afp</td>
       <td>150</td>
+    </tr>
+    <tr>
+      <th>14778</th>
+      <td>World</td>
+      <td>iraq</td>
+      <td>145</td>
     </tr>
   </tbody>
 </table>
@@ -2545,17 +2565,17 @@ Expected output is:
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0       Wall Bears Claw Black Reuters Reuters short se...
-1       Carlyle look Commercial Aerospace Reuters Reut...
-2       oil Economy Cloud Stocks Outlook Reuters Reute...
-3       Iraq Halts Oil Exports Main Southern Pipeline ...
+<div class="output text_plain highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>0       wall bear claw black reuters reuter short sell...
+1       carlyle look commercial aerospace reuter reute...
+2       oil economy cloud stock outlook reuters reuter...
+3       iraq halt oil export main southern pipeline re...
 4       oil price soar time record pose new menace eco...
                               ...                        
-3995    IOA set committee probe dope scandal Athens Au...
-3996    FACTBOX Jonathan Woodgate factbox MADRID Aug R...
-3997    british canoe pair lose ATHENS Reuters Slovaki...
-3998    Softball Team Posts Shutout AP AP Cat Osterman...
-3999    Paul Hamm example PAUL HAMM fall rise Olympics...
+3995    ioa set committee probe dope scandal athens au...
+3996    factbox jonathan woodgate factbox madrid aug r...
+3997    british canoe pair lose athens reuter slovakia...
+3998    softball team post shutout ap ap cat osterman ...
+3999    paul hamm example paul hamm fall rise olympic ...
 Name: spacy_tokens, Length: 4000, dtype: object
 </pre></div>
 </div>
@@ -2604,7 +2624,7 @@ Name: spacy_tokens, Length: 4000, dtype: object
       <th>ad</th>
       <th>add</th>
       <th>advance</th>
-      <th>afghanistan</th>
+      <th>afghan</th>
       <th>...</th>
       <th>wrap</th>
       <th>xinhuanet</th>
@@ -2941,6 +2961,7 @@ iteration: 10 of max_iter: 10
 </ul>
 </li>
 <li><p>Notice that the <code class="docutils literal notranslate"><span class="pre">numpy.argsort</span></code> function gives you the indexes from the array items with the lowest value, which is not what we want. You need to figure out a way to reverse a numpy array and select the top <code class="docutils literal notranslate"><span class="pre">n</span></code> items.</p></li>
+<li><p>Note that, technically, to retrieve the top <code class="docutils literal notranslate"><span class="pre">n</span></code> items, we can implement this function without using <code class="docutils literal notranslate"><span class="pre">numpy.argsort</span></code>. But for this task, we want you to practice using the <code class="docutils literal notranslate"><span class="pre">numpy.argsort</span></code> function. An alternative (and more efficient in terms of time complexity) approach is to use a <a class="reference external" href="https://www.geeksforgeeks.org/python/min-heap-in-python/">min-heap</a> data structure to track the current top <code class="docutils literal notranslate"><span class="pre">n</span></code> items and replace them if there are items with larger values. You can implement a min-heap as an optional challenge.</p></li>
 </ul>
 <div class="cell docutils container">
 <div class="cell_input docutils container">
@@ -2998,7 +3019,7 @@ iteration: 10 of max_iter: 10
 Your output is:
 None
 Expected output is:
-[ 38  56 602 978 361 884 526 747 995 603]
+[ 41 995 976 354 883 584 587 764 922 493]
 </pre></div>
 </div>
 </div>
@@ -3054,7 +3075,7 @@ Expected output is:
 </div>
 <div class="cell_output docutils container">
 <div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #0:
-ap athens olympic win gold team man reuters year olympics
+ap year win game team new night run tuesday lead
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3081,48 +3102,48 @@ ap athens olympic win gold team man reuters year olympics
   <tbody>
     <tr>
       <th>ap</th>
-      <td>403.515105</td>
-    </tr>
-    <tr>
-      <th>athens</th>
-      <td>403.246789</td>
-    </tr>
-    <tr>
-      <th>olympic</th>
-      <td>309.246800</td>
-    </tr>
-    <tr>
-      <th>win</th>
-      <td>286.162784</td>
-    </tr>
-    <tr>
-      <th>gold</th>
-      <td>243.246784</td>
-    </tr>
-    <tr>
-      <th>team</th>
-      <td>210.578474</td>
-    </tr>
-    <tr>
-      <th>man</th>
-      <td>199.276155</td>
-    </tr>
-    <tr>
-      <th>reuters</th>
-      <td>190.315506</td>
+      <td>610.880637</td>
     </tr>
     <tr>
       <th>year</th>
-      <td>182.915320</td>
+      <td>179.846445</td>
     </tr>
     <tr>
-      <th>olympics</th>
-      <td>175.246315</td>
+      <th>win</th>
+      <td>160.743639</td>
+    </tr>
+    <tr>
+      <th>game</th>
+      <td>150.896240</td>
+    </tr>
+    <tr>
+      <th>team</th>
+      <td>137.085499</td>
+    </tr>
+    <tr>
+      <th>new</th>
+      <td>135.926737</td>
+    </tr>
+    <tr>
+      <th>night</th>
+      <td>134.773386</td>
+    </tr>
+    <tr>
+      <th>run</th>
+      <td>134.253110</td>
+    </tr>
+    <tr>
+      <th>tuesday</th>
+      <td>118.537522</td>
+    </tr>
+    <tr>
+      <th>lead</th>
+      <td>105.874244</td>
     </tr>
   </tbody>
 </table>
 </div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #1:
-reuters price oil google new say stock share york high
+price new reuters company google oil stock share high york
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3148,49 +3169,49 @@ reuters price oil google new say stock share york high
   </thead>
   <tbody>
     <tr>
-      <th>reuters</th>
-      <td>613.090454</td>
-    </tr>
-    <tr>
       <th>price</th>
-      <td>447.227585</td>
-    </tr>
-    <tr>
-      <th>oil</th>
-      <td>333.991865</td>
-    </tr>
-    <tr>
-      <th>google</th>
-      <td>330.413708</td>
+      <td>472.243765</td>
     </tr>
     <tr>
       <th>new</th>
-      <td>327.240235</td>
+      <td>438.490158</td>
     </tr>
     <tr>
-      <th>say</th>
-      <td>302.630197</td>
+      <th>reuters</th>
+      <td>374.728574</td>
+    </tr>
+    <tr>
+      <th>company</th>
+      <td>349.138239</td>
+    </tr>
+    <tr>
+      <th>google</th>
+      <td>348.248453</td>
+    </tr>
+    <tr>
+      <th>oil</th>
+      <td>320.028234</td>
     </tr>
     <tr>
       <th>stock</th>
-      <td>251.689804</td>
+      <td>270.246131</td>
     </tr>
     <tr>
       <th>share</th>
-      <td>240.112990</td>
-    </tr>
-    <tr>
-      <th>york</th>
-      <td>220.173493</td>
+      <td>249.241426</td>
     </tr>
     <tr>
       <th>high</th>
-      <td>214.368258</td>
+      <td>240.913959</td>
+    </tr>
+    <tr>
+      <th>york</th>
+      <td>213.955653</td>
     </tr>
   </tbody>
 </table>
 </div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #2:
-new ap company say microsoft security software service plan time
+ap iraq afp najaf new plan reuters kill official troop
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3216,49 +3237,49 @@ new ap company say microsoft security software service plan time
   </thead>
   <tbody>
     <tr>
-      <th>new</th>
-      <td>294.138710</td>
-    </tr>
-    <tr>
       <th>ap</th>
-      <td>211.640513</td>
+      <td>208.165314</td>
     </tr>
     <tr>
-      <th>company</th>
-      <td>203.847837</td>
+      <th>iraq</th>
+      <td>200.238543</td>
     </tr>
     <tr>
-      <th>say</th>
-      <td>197.105016</td>
+      <th>afp</th>
+      <td>164.399466</td>
     </tr>
     <tr>
-      <th>microsoft</th>
-      <td>128.118405</td>
+      <th>najaf</th>
+      <td>157.249712</td>
     </tr>
     <tr>
-      <th>security</th>
-      <td>118.300459</td>
-    </tr>
-    <tr>
-      <th>software</th>
-      <td>117.660863</td>
-    </tr>
-    <tr>
-      <th>service</th>
-      <td>109.950400</td>
+      <th>new</th>
+      <td>145.003065</td>
     </tr>
     <tr>
       <th>plan</th>
-      <td>107.479263</td>
+      <td>122.214977</td>
     </tr>
     <tr>
-      <th>time</th>
-      <td>107.182716</td>
+      <th>reuters</th>
+      <td>119.975771</td>
+    </tr>
+    <tr>
+      <th>kill</th>
+      <td>116.768262</td>
+    </tr>
+    <tr>
+      <th>official</th>
+      <td>113.703904</td>
+    </tr>
+    <tr>
+      <th>troop</th>
+      <td>106.248004</td>
     </tr>
   </tbody>
 </table>
 </div></div><div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Topic #3:
-say reuters ap iraq najaf president plan kill minister wednesday
+olympic athens gold win reuter medal greece game man united
 </pre></div>
 </div>
 <div class="output text_html"><div>
@@ -3284,44 +3305,44 @@ say reuters ap iraq najaf president plan kill minister wednesday
   </thead>
   <tbody>
     <tr>
-      <th>say</th>
-      <td>257.517882</td>
+      <th>olympic</th>
+      <td>404.017821</td>
     </tr>
     <tr>
-      <th>reuters</th>
-      <td>240.920321</td>
+      <th>athens</th>
+      <td>383.314127</td>
     </tr>
     <tr>
-      <th>ap</th>
-      <td>225.568027</td>
+      <th>gold</th>
+      <td>243.582109</td>
     </tr>
     <tr>
-      <th>iraq</th>
-      <td>168.908879</td>
+      <th>win</th>
+      <td>198.746791</td>
     </tr>
     <tr>
-      <th>najaf</th>
-      <td>157.249665</td>
+      <th>reuter</th>
+      <td>176.990680</td>
     </tr>
     <tr>
-      <th>president</th>
-      <td>154.238458</td>
+      <th>medal</th>
+      <td>175.708719</td>
     </tr>
     <tr>
-      <th>plan</th>
-      <td>150.074533</td>
+      <th>greece</th>
+      <td>134.798159</td>
     </tr>
     <tr>
-      <th>kill</th>
-      <td>133.206681</td>
+      <th>game</th>
+      <td>120.594998</td>
     </tr>
     <tr>
-      <th>minister</th>
-      <td>132.223089</td>
+      <th>man</th>
+      <td>112.951557</td>
     </tr>
     <tr>
-      <th>wednesday</th>
-      <td>110.130430</td>
+      <th>united</th>
+      <td>89.558755</td>
     </tr>
   </tbody>
 </table>
@@ -3343,10 +3364,10 @@ say reuters ap iraq najaf president plan kill minister wednesday
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/tutorial-text-data_107_0.png" src="../_images/tutorial-text-data_107_0.png" />
-<img alt="../_images/tutorial-text-data_107_1.png" src="../_images/tutorial-text-data_107_1.png" />
-<img alt="../_images/tutorial-text-data_107_2.png" src="../_images/tutorial-text-data_107_2.png" />
-<img alt="../_images/tutorial-text-data_107_3.png" src="../_images/tutorial-text-data_107_3.png" />
+<img alt="../_images/tutorial-text-data_109_0.png" src="../_images/tutorial-text-data_109_0.png" />
+<img alt="../_images/tutorial-text-data_109_1.png" src="../_images/tutorial-text-data_109_1.png" />
+<img alt="../_images/tutorial-text-data_109_2.png" src="../_images/tutorial-text-data_109_2.png" />
+<img alt="../_images/tutorial-text-data_109_3.png" src="../_images/tutorial-text-data_109_3.png" />
 </div>
 </div>
 <p>Compare this with the word cloud visualizations in the pre-processing step previously. Does the LDA topic modeling represent the actural four document classes in the training data? What do you think?</p>
@@ -3386,11 +3407,11 @@ say reuters ap iraq najaf president plan kill minister wednesday
 </div>
 <div class="cell_output docutils container">
 <script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "7c0ce75d9072407eb37fb8ac366051a6", "version_major": 2, "version_minor": 0}
+{"model_id": "ec32d96d302948119e16e7d910d66ad8", "version_major": 2, "version_minor": 0}
 </script><script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "93c084a874054aac9d37dfe431c1c9d4", "version_major": 2, "version_minor": 0}
+{"model_id": "4ef4429e5b834dcf85ebff8b50db7749", "version_major": 2, "version_minor": 0}
 </script><script type="application/vnd.jupyter.widget-view+json">
-{"model_id": "5897f0dc6aea48b78b6dcc41757a3f17", "version_major": 2, "version_minor": 0}
+{"model_id": "cd5a00b0c93d4047becdbeca28d09912", "version_major": 2, "version_minor": 0}
 </script><div class="output text_html"><div>
 <style scoped>
     .dataframe tbody tr th:only-of-type {
@@ -3424,8 +3445,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Fears for T N pension after talks Unions repre...</td>
       <td>[Fears, for, T, N, pension, after, talk, Union...</td>
-      <td>(Fears, for, T, N, pension, after, talks, Unio...</td>
-      <td>[fear, t, N, pension, talk, Unions, represent,...</td>
+      <td>(fears, for, t, n, pension, after, talks, unio...</td>
+      <td>[fear, t, n, pension, talk, union, represent, ...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -3433,8 +3454,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>The Race is On: Second Private Team Sets Launc...</td>
       <td>[The, Race, be, On, :, Second, Private, Team, ...</td>
-      <td>(The, Race, is, On, :, Second, Private, Team, ...</td>
-      <td>[race, Second, private, Team, Sets, Launch, Da...</td>
+      <td>(the, race, is, on, :, second, private, team, ...</td>
+      <td>[race, second, private, team, set, launch, dat...</td>
     </tr>
     <tr>
       <th>2</th>
@@ -3442,8 +3463,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>Ky. Company Wins Grant to Study Peptides (AP) ...</td>
       <td>[Ky., Company, Wins, Grant, to, Study, Peptide...</td>
-      <td>(Ky., Company, Wins, Grant, to, Study, Peptide...</td>
-      <td>[Company, win, Grant, Study, Peptides, AP, AP,...</td>
+      <td>(ky., company, wins, grant, to, study, peptide...</td>
+      <td>[company, win, grant, study, peptide, ap, ap, ...</td>
     </tr>
     <tr>
       <th>3</th>
@@ -3451,8 +3472,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>Prediction Unit Helps Forecast Wildfires (AP) ...</td>
       <td>[Prediction, Unit, Helps, Forecast, Wildfires,...</td>
-      <td>(Prediction, Unit, Helps, Forecast, Wildfires,...</td>
-      <td>[prediction, Unit, help, Forecast, Wildfires, ...</td>
+      <td>(prediction, unit, helps, forecast, wildfires,...</td>
+      <td>[prediction, unit, help, forecast, wildfire, a...</td>
     </tr>
     <tr>
       <th>4</th>
@@ -3460,8 +3481,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>Calif. Aims to Limit Farm-Related Smog (AP) AP...</td>
       <td>[Calif, ., Aims, to, Limit, Farm-Related, Smog...</td>
-      <td>(Calif., Aims, to, Limit, Farm, -, Related, Sm...</td>
-      <td>[aim, Limit, Farm, relate, Smog, AP, AP, South...</td>
+      <td>(calif., aims, to, limit, farm, -, related, sm...</td>
+      <td>[aim, limit, farm, relate, smog, ap, ap, south...</td>
     </tr>
     <tr>
       <th>...</th>
@@ -3478,8 +3499,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>New Overtime Rules Take Effect New Bush admini...</td>
       <td>[New, Overtime, Rules, Take, Effect, New, Bush...</td>
-      <td>(New, Overtime, Rules, Take, Effect, New, Bush...</td>
-      <td>[New, Overtime, Rules, Effect, New, Bush, admi...</td>
+      <td>(new, overtime, rules, take, effect, new, bush...</td>
+      <td>[new, overtime, rule, effect, new, bush, admin...</td>
     </tr>
     <tr>
       <th>479</th>
@@ -3487,8 +3508,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Dollar Holds Gains, Fed Comments Help  TOKYO (...</td>
       <td>[Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
-      <td>(Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
-      <td>[Dollar, Holds, Gains, Fed, comment, help, TOK...</td>
+      <td>(dollar, holds, gains, ,, fed, comments, help,...</td>
+      <td>[dollar, hold, gain, fed, comment, help, tokyo...</td>
     </tr>
     <tr>
       <th>481</th>
@@ -3496,8 +3517,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Dark arts of spin evident in phoney war for Ab...</td>
       <td>[Dark, art, of, spin, evident, in, phoney, war...</td>
-      <td>(Dark, arts, of, spin, evident, in, phoney, wa...</td>
-      <td>[dark, art, spin, evident, phoney, war, Abbey,...</td>
+      <td>(dark, arts, of, spin, evident, in, phoney, wa...</td>
+      <td>[dark, art, spin, evident, phoney, war, abbey,...</td>
     </tr>
     <tr>
       <th>482</th>
@@ -3505,8 +3526,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Controversial US Overtime Rules Take Effect Ne...</td>
       <td>[Controversial, US, Overtime, Rules, Take, Eff...</td>
-      <td>(Controversial, US, Overtime, Rules, Take, Eff...</td>
-      <td>[controversial, Overtime, Rules, Effect, new, ...</td>
+      <td>(controversial, us, overtime, rules, take, eff...</td>
+      <td>[controversial, overtime, rule, effect, new, o...</td>
     </tr>
     <tr>
       <th>484</th>
@@ -3514,8 +3535,8 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>SAS Braathens to cut Gatwick, Geneva flights b...</td>
       <td>[SAS, Braathens, to, cut, Gatwick, ,, Geneva, ...</td>
-      <td>(SAS, Braathens, to, cut, Gatwick, ,, Geneva, ...</td>
-      <td>[SAS, Braathens, cut, Gatwick, Geneva, flight,...</td>
+      <td>(sas, braathens, to, cut, gatwick, ,, geneva, ...</td>
+      <td>[sas, braathen, cut, gatwick, geneva, flights,...</td>
     </tr>
   </tbody>
 </table>
@@ -3546,36 +3567,36 @@ say reuters ap iraq najaf president plan kill minister wednesday
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[-2.60392636e-01  3.61957699e-02  1.09209269e-01  1.59883693e-01
-   7.47058615e-02 -1.83978200e-01  1.15174890e-01  1.41995341e-01
-  -1.27571225e-01  4.41441536e-01 -7.66160041e-02 -4.21129227e-01
-  -7.70293251e-02 -1.32060111e-01  4.39062655e-01  2.57349819e-01
-  -6.41567782e-02  1.71880454e-01  6.53994977e-02 -2.28234261e-01
-  -1.31064489e-01  1.52635470e-03  2.27316573e-01  1.49013713e-01
-  -2.45736703e-01  1.41700311e-02 -9.18157026e-02  3.44747216e-01
-  -3.31136227e-01 -1.63988218e-01  3.18268031e-01 -1.14187524e-01
-  -9.01155993e-02 -3.15312743e-01 -2.72045583e-02  1.96554258e-01
-   7.19608963e-01 -4.33225513e-01 -3.80716771e-01 -3.01050067e-01]
- [-5.55762206e-04  1.75153557e-02  1.63081214e-02  4.37505618e-02
-   1.91775504e-02 -2.68786456e-02 -9.65814292e-03  4.77873608e-02
-   1.68873817e-02  7.72785023e-02 -1.24694523e-03 -4.48038988e-02
-  -3.69028486e-02  1.08696317e-04  5.88426664e-02  4.69341688e-02
-  -9.38272290e-03  8.82259570e-03  2.31929235e-02 -4.38504890e-02
-  -1.66977551e-02 -2.26898771e-02  3.22737843e-02  2.31878553e-02
-  -1.98843461e-02  5.50923310e-03  1.77841890e-03  4.55366671e-02
-  -2.32978743e-02 -3.88195775e-02  6.80615827e-02 -2.95684878e-02
-  -2.69708876e-02 -5.04455604e-02 -1.28503460e-02  2.98611298e-02
-   1.10825963e-01 -7.42685422e-02 -6.67480677e-02 -5.01767062e-02]
- [-7.88029432e-02  3.57245207e-02  1.87077932e-02  8.16702172e-02
-  -3.05961762e-02 -5.07439226e-02  3.81175242e-02  3.65127474e-02
-  -5.89498617e-02  1.90558270e-01 -2.58215386e-02 -1.45636722e-01
-  -3.71700376e-02 -7.68104494e-02  1.64298996e-01  1.00462683e-01
-   7.34513486e-03  2.07834784e-02  4.85605095e-03 -8.80082399e-02
-  -4.16397192e-02 -2.22325884e-02  1.00829713e-01  1.42552294e-02
-  -7.83072636e-02 -1.89409941e-03 -3.98297459e-02  1.38811961e-01
-  -1.12817809e-01 -3.60937640e-02  1.17614634e-01 -6.38329387e-02
-  -2.99992543e-02 -8.16034526e-02 -3.84166278e-02  1.12850294e-01
-   3.21655065e-01 -1.53566912e-01 -1.89866170e-01 -6.67793155e-02]]
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[-2.65828192e-01  2.43495516e-02  1.34873852e-01  1.49036139e-01
+   7.88570195e-02 -1.73600495e-01  1.31136611e-01  1.33428574e-01
+  -1.42384008e-01  3.87243956e-01 -8.20084065e-02 -3.78706247e-01
+  -7.27552697e-02 -9.83835086e-02  4.11955029e-01  2.32377276e-01
+  -7.02954680e-02  2.10471794e-01  8.47425833e-02 -2.19417810e-01
+  -1.40047491e-01 -4.07316023e-03  2.06214309e-01  1.49617627e-01
+  -2.26212308e-01  3.61345359e-03 -7.10044652e-02  3.32833797e-01
+  -3.28598678e-01 -1.81797072e-01  2.84165025e-01 -1.22997090e-01
+  -9.34211314e-02 -3.10565382e-01 -8.00188817e-03  1.86274409e-01
+   6.68702006e-01 -4.39141572e-01 -3.68162185e-01 -3.25481117e-01]
+ [-6.18404569e-03  2.44758949e-02  8.67913943e-03  4.26325724e-02
+  -3.83874518e-04 -2.22459305e-02 -1.88801382e-02  4.31260951e-02
+   2.49148607e-02  9.42440405e-02  8.50717258e-03 -4.14945371e-02
+  -3.44442204e-02 -1.25262421e-02  5.08806184e-02  4.49410006e-02
+  -8.51881411e-03 -3.52909998e-03  7.89916608e-03 -4.03733253e-02
+  -1.09922318e-02 -2.45106556e-02  2.87190806e-02  1.17836688e-02
+  -1.19545432e-02  4.32246272e-03 -7.29921227e-03  3.24606262e-02
+  -1.85896195e-02 -2.40732990e-02  5.82955256e-02 -2.95799617e-02
+  -2.10647807e-02 -4.75548021e-02 -2.24800091e-02  3.84113230e-02
+   1.23258166e-01 -6.33669719e-02 -6.87334388e-02 -2.44774185e-02]
+ [-7.46550411e-02  2.23734993e-02  2.82268450e-02  8.43119100e-02
+   1.73981430e-03 -5.43180220e-02  5.10284156e-02  4.01673205e-02
+  -7.40358010e-02  1.75836876e-01 -4.82077859e-02 -1.57729819e-01
+  -3.53572220e-02 -5.72944023e-02  1.90627709e-01  1.10096596e-01
+  -1.33357709e-03  3.77566516e-02  2.48428453e-02 -1.07833594e-01
+  -5.24933375e-02 -1.69068221e-02  1.16769075e-01  4.16681841e-02
+  -9.72319767e-02 -2.69094273e-03 -2.94898823e-02  1.50825799e-01
+  -1.26531258e-01 -6.06328882e-02  1.34903818e-01 -5.74122816e-02
+  -4.68127839e-02 -9.42096561e-02 -3.13579217e-02  1.04912296e-01
+   3.13355803e-01 -1.79738089e-01 -1.95738181e-01 -1.13482714e-01]]
 </pre></div>
 </div>
 </div>
@@ -3588,19 +3609,19 @@ say reuters ap iraq najaf president plan kill minister wednesday
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[ 0.44236845 -0.01180173  0.20908105 ... -0.18478878 -0.17872915
-  -0.20212969]
- [ 1.347008   -0.9065002   1.0384194  ...  0.9311755  -0.88710904
-  -1.0599288 ]
- [ 0.84580296 -1.3604947   0.8471415  ...  0.95768267 -0.07491717
-   0.32537135]
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>[[ 0.8491596   0.08969933  0.45930034 ... -0.20678784 -0.61804914
+  -0.35872677]
+ [ 1.4917415  -1.0596651   1.2780495  ...  0.92358476 -0.8935973
+  -0.7514715 ]
+ [ 0.8278586  -1.4765553   0.88902605 ...  0.89863366 -0.02829781
+   0.29740265]
  ...
- [ 1.4835097   0.13096532  0.63991284 ... -1.166823    0.250414
-  -0.7703706 ]
- [-0.18388712 -0.7047122   0.49538338 ...  0.26794562 -0.6400709
-   0.57972735]
- [-0.44166976 -0.5572643  -0.5958953  ... -0.62469536 -0.9879791
-  -0.19887315]]
+ [ 1.4976828   0.1430974   0.634379   ... -1.2854272   0.18794824
+  -0.83963615]
+ [-0.18121873 -0.6467831   0.25435668 ...  0.34791464 -0.4954952
+   0.20680112]
+ [-0.5954079  -0.37447134 -0.7652983  ... -0.7136281  -0.805043
+  -0.35388348]]
 </pre></div>
 </div>
 </div>
@@ -3648,9 +3669,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Fears for T N pension after talks Unions repre...</td>
       <td>[Fears, for, T, N, pension, after, talk, Union...</td>
-      <td>(Fears, for, T, N, pension, after, talks, Unio...</td>
-      <td>[fear, t, N, pension, talk, Unions, represent,...</td>
-      <td>[[-0.9206627, 0.7367932, -0.17732513, 1.061838...</td>
+      <td>(fears, for, t, n, pension, after, talks, unio...</td>
+      <td>[fear, t, n, pension, talk, union, represent, ...</td>
+      <td>[[-1.2894605, 1.501088, 0.18901733, -0.0458099...</td>
     </tr>
     <tr>
       <th>1</th>
@@ -3658,9 +3679,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>The Race is On: Second Private Team Sets Launc...</td>
       <td>[The, Race, be, On, :, Second, Private, Team, ...</td>
-      <td>(The, Race, is, On, :, Second, Private, Team, ...</td>
-      <td>[race, Second, private, Team, Sets, Launch, Da...</td>
-      <td>[[0.3289305, -0.659908, -0.04628387, 0.459979,...</td>
+      <td>(the, race, is, on, :, second, private, team, ...</td>
+      <td>[race, second, private, team, set, launch, dat...</td>
+      <td>[[0.8185649, -0.438896, 0.06151727, 0.4623186,...</td>
     </tr>
     <tr>
       <th>2</th>
@@ -3668,9 +3689,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>Ky. Company Wins Grant to Study Peptides (AP) ...</td>
       <td>[Ky., Company, Wins, Grant, to, Study, Peptide...</td>
-      <td>(Ky., Company, Wins, Grant, to, Study, Peptide...</td>
-      <td>[Company, win, Grant, Study, Peptides, AP, AP,...</td>
-      <td>[[-0.085725844, -1.1698873, 0.5357769, 1.32863...</td>
+      <td>(ky., company, wins, grant, to, study, peptide...</td>
+      <td>[company, win, grant, study, peptide, ap, ap, ...</td>
+      <td>[[0.1604262, -1.0062027, 0.6535754, 1.2415886,...</td>
     </tr>
     <tr>
       <th>3</th>
@@ -3678,9 +3699,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>Prediction Unit Helps Forecast Wildfires (AP) ...</td>
       <td>[Prediction, Unit, Helps, Forecast, Wildfires,...</td>
-      <td>(Prediction, Unit, Helps, Forecast, Wildfires,...</td>
-      <td>[prediction, Unit, help, Forecast, Wildfires, ...</td>
-      <td>[[-0.092530996, -1.1091797, 0.007843953, 0.410...</td>
+      <td>(prediction, unit, helps, forecast, wildfires,...</td>
+      <td>[prediction, unit, help, forecast, wildfire, a...</td>
+      <td>[[0.14491194, -1.1049261, 0.53314364, 0.445608...</td>
     </tr>
     <tr>
       <th>4</th>
@@ -3688,9 +3709,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Sci/Tech</td>
       <td>Calif. Aims to Limit Farm-Related Smog (AP) AP...</td>
       <td>[Calif, ., Aims, to, Limit, Farm-Related, Smog...</td>
-      <td>(Calif., Aims, to, Limit, Farm, -, Related, Sm...</td>
-      <td>[aim, Limit, Farm, relate, Smog, AP, AP, South...</td>
-      <td>[[-0.10481978, -0.5771505, 1.3032898, 0.098989...</td>
+      <td>(calif., aims, to, limit, farm, -, related, sm...</td>
+      <td>[aim, limit, farm, relate, smog, ap, ap, south...</td>
+      <td>[[-0.60685766, -0.9683564, -0.9250274, -1.0710...</td>
     </tr>
     <tr>
       <th>...</th>
@@ -3708,9 +3729,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>New Overtime Rules Take Effect New Bush admini...</td>
       <td>[New, Overtime, Rules, Take, Effect, New, Bush...</td>
-      <td>(New, Overtime, Rules, Take, Effect, New, Bush...</td>
-      <td>[New, Overtime, Rules, Effect, New, Bush, admi...</td>
-      <td>[[0.63283896, -0.8598237, 0.18151897, 0.718614...</td>
+      <td>(new, overtime, rules, take, effect, new, bush...</td>
+      <td>[new, overtime, rule, effect, new, bush, admin...</td>
+      <td>[[1.5682385, -0.61870205, -0.5218468, -0.14901...</td>
     </tr>
     <tr>
       <th>479</th>
@@ -3718,9 +3739,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Dollar Holds Gains, Fed Comments Help  TOKYO (...</td>
       <td>[Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
-      <td>(Dollar, Holds, Gains, ,, Fed, Comments, Help,...</td>
-      <td>[Dollar, Holds, Gains, Fed, comment, help, TOK...</td>
-      <td>[[0.27932516, -1.1461885, 0.29283038, 0.256060...</td>
+      <td>(dollar, holds, gains, ,, fed, comments, help,...</td>
+      <td>[dollar, hold, gain, fed, comment, help, tokyo...</td>
+      <td>[[0.18100843, -0.96723765, 0.1998775, 0.014060...</td>
     </tr>
     <tr>
       <th>481</th>
@@ -3728,9 +3749,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Dark arts of spin evident in phoney war for Ab...</td>
       <td>[Dark, art, of, spin, evident, in, phoney, war...</td>
-      <td>(Dark, arts, of, spin, evident, in, phoney, wa...</td>
-      <td>[dark, art, spin, evident, phoney, war, Abbey,...</td>
-      <td>[[0.6209623, -0.8559445, -0.29310828, 0.090776...</td>
+      <td>(dark, arts, of, spin, evident, in, phoney, wa...</td>
+      <td>[dark, art, spin, evident, phoney, war, abbey,...</td>
+      <td>[[0.96224576, -0.6546047, -0.34719133, -0.5105...</td>
     </tr>
     <tr>
       <th>482</th>
@@ -3738,9 +3759,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>Controversial US Overtime Rules Take Effect Ne...</td>
       <td>[Controversial, US, Overtime, Rules, Take, Eff...</td>
-      <td>(Controversial, US, Overtime, Rules, Take, Eff...</td>
-      <td>[controversial, Overtime, Rules, Effect, new, ...</td>
-      <td>[[0.19809127, -0.7492492, 0.23203318, 0.294419...</td>
+      <td>(controversial, us, overtime, rules, take, eff...</td>
+      <td>[controversial, overtime, rule, effect, new, o...</td>
+      <td>[[0.5177243, -0.7595788, -0.41509283, 0.271178...</td>
     </tr>
     <tr>
       <th>484</th>
@@ -3748,9 +3769,9 @@ say reuters ap iraq najaf president plan kill minister wednesday
       <td>Business</td>
       <td>SAS Braathens to cut Gatwick, Geneva flights b...</td>
       <td>[SAS, Braathens, to, cut, Gatwick, ,, Geneva, ...</td>
-      <td>(SAS, Braathens, to, cut, Gatwick, ,, Geneva, ...</td>
-      <td>[SAS, Braathens, cut, Gatwick, Geneva, flight,...</td>
-      <td>[[-0.34229928, -0.94983363, 0.3551279, 0.64431...</td>
+      <td>(sas, braathens, to, cut, gatwick, ,, geneva, ...</td>
+      <td>[sas, braathen, cut, gatwick, geneva, flights,...</td>
+      <td>[[-0.48846048, -0.26813602, -0.036266387, -0.2...</td>
     </tr>
   </tbody>
 </table>
@@ -3843,11 +3864,11 @@ If you want to run the code faster, you can also put this notebook on Google Col
 </div>
 </div>
 <div class="cell_output docutils container">
-<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Epoch [1/5], Loss: 1.3852
-Epoch [2/5], Loss: 1.3765
-Epoch [3/5], Loss: 1.3249
-Epoch [4/5], Loss: 1.0777
-Epoch [5/5], Loss: 0.8335
+<div class="output stream highlight-myst-ansi notranslate"><div class="highlight"><pre><span></span>Epoch [1/5], Loss: 1.3847
+Epoch [2/5], Loss: 1.3548
+Epoch [3/5], Loss: 1.2615
+Epoch [4/5], Loss: 0.9561
+Epoch [5/5], Loss: 0.7802
 </pre></div>
 </div>
 </div>
@@ -3883,7 +3904,7 @@ Epoch [5/5], Loss: 0.8335
 </div>
 </div>
 <div class="cell_output docutils container">
-<img alt="../_images/tutorial-text-data_135_0.png" src="../_images/tutorial-text-data_135_0.png" />
+<img alt="../_images/tutorial-text-data_137_0.png" src="../_images/tutorial-text-data_137_0.png" />
 </div>
 </div>
 <p>If you do not feel done with text data yet, there is always more to do. In this optional assignment, you can experiment with the number of epochs, learning rate, vector size, optimizer, neural network architecture, regularization, etc. Also, we only use a small subset of this dataset for performance issues. If you have a high-end computer, you can go to the beginning of this tutorial to increase the size of the subset.</p>

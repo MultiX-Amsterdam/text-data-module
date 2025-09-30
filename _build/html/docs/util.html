@@ -325,9 +325,13 @@ title="Print to PDF"
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">from</span> <span class="nn">tqdm.notebook</span> <span class="kn">import</span> <span class="n">tqdm</span>
 <span class="kn">from</span> <span class="nn">wordcloud</span> <span class="kn">import</span> <span class="n">WordCloud</span>
+<span class="kn">from</span> <span class="nn">spacy.lang.en.stop_words</span> <span class="kn">import</span> <span class="n">STOP_WORDS</span>
+<span class="kn">from</span> <span class="nn">spacy.tokens</span> <span class="kn">import</span> <span class="n">Doc</span>
+<span class="kn">from</span> <span class="nn">spacy.language</span> <span class="kn">import</span> <span class="n">Language</span>
 
 <span class="c1"># Add tqdm functions to pandas.</span>
 <span class="n">tqdm</span><span class="o">.</span><span class="n">pandas</span><span class="p">()</span>
+
 
 <span class="k">def</span> <span class="nf">check_answer_df</span><span class="p">(</span><span class="n">df_result</span><span class="p">,</span> <span class="n">df_answer</span><span class="p">,</span> <span class="n">n</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -462,6 +466,12 @@ title="Print to PDF"
         <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 
 
+<span class="nd">@Language</span><span class="o">.</span><span class="n">component</span><span class="p">(</span><span class="s2">&quot;lowercase_text&quot;</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">lowercase_text</span><span class="p">(</span><span class="n">doc</span><span class="p">):</span>
+    <span class="c1"># Create a new Doc with the lowercase text, using the same Vocab</span>
+    <span class="k">return</span> <span class="n">Doc</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">vocab</span><span class="p">,</span> <span class="n">words</span><span class="o">=</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">])</span>
+    
+
 <span class="k">def</span> <span class="nf">add_spacy_doc</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">nlp</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Add a column with the spaCy Doc objects.</span>
@@ -497,7 +507,7 @@ title="Print to PDF"
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    df : pandas.DataFrame</span>
-<span class="sd">        The dataframe containing at least the &quot;doc&quot; column.</span>
+<span class="sd">        The dataframe containing at least the &quot;doc&quot; column (spaCy Doc objects).</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -507,9 +517,10 @@ title="Print to PDF"
     <span class="c1"># Copy the dataframe to avoid editing the original one.</span>
     <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;spacy_tokens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;doc&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span>
-        <span class="k">lambda</span> <span class="n">tokens</span><span class="p">:</span> <span class="p">[</span><span class="n">token</span><span class="o">.</span><span class="n">lemma_</span> <span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span> <span class="k">if</span> <span class="n">token</span><span class="o">.</span><span class="n">is_alpha</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">token</span><span class="o">.</span><span class="n">is_stop</span><span class="p">]</span>
-    <span class="p">)</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;spacy_tokens&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">lemma_</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">doc</span> <span class="k">if</span> <span class="n">t</span><span class="o">.</span><span class="n">is_alpha</span> <span class="ow">and</span> <span class="n">t</span><span class="o">.</span><span class="n">lemma_</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">STOP_WORDS</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">doc</span> <span class="ow">in</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;doc&quot;</span><span class="p">]</span>
+    <span class="p">]</span>
 
     <span class="k">return</span> <span class="n">df</span>
 

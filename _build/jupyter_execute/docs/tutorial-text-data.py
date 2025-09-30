@@ -3,7 +3,7 @@
 
 # # Tutorial (Text Data Processing)
 
-# (Last updated: Jan 29, 2025)[^credit]
+# (Last updated: Sep 30, 2025)[^credit]
 # 
 # [^credit]: Credit: this teaching material is created by [Robert van Straten](https://github.com/robertvanstraten) and revised by [Alejandro Monroy](https://github.com/amonroym99) under the supervision of [Yen-Chia Hsu](https://github.com/yenchiah).
 
@@ -50,6 +50,7 @@ import pandas as pd
 import seaborn as sns
 
 import spacy
+from spacy.language import Language
 
 import torch
 import torch.nn as nn
@@ -95,6 +96,7 @@ from util.util import (
     wordnet_pos,
     reformat_data,
     visualize_word_counts,
+    lowercase_text,
     add_spacy_doc,
     add_spacy_tokens,
     add_padded_tensors
@@ -133,13 +135,15 @@ df_train = pd.read_csv("train.csv")
 df_test = pd.read_csv("test.csv")
 
 
-# For performance reasons, we will only use a small subset of this dataset.
+# For performance reasons, we will only use a small subset of this dataset for training and testing. If you have a powerful computer, please feel free to adjust the `train_size` and `test_size` parameters.
 
 # In[3]:
 
 
-df_train = df_train.groupby("Class Index").head(1000)
-df_test = df_test.groupby("Class Index").head(100)
+train_size = 1000
+test_size = 100
+df_train = df_train.groupby("Class Index").head(train_size)
+df_test = df_test.groupby("Class Index").head(test_size)
 
 
 # In[4]:
@@ -354,7 +358,7 @@ answer_word_counts.groupby("class").head(n=5)
 
 
 word_counts = get_word_counts(df_with_tokens, token_col="tokens")
-check_answer_df(answer_word_counts, word_counts)
+check_answer_df(word_counts, answer_word_counts)
 
 
 # We provide the `visualize_word_counts` function in the [utility file](#util) to visualize the word counts that you just computed using the [wordcloud](https://amueller.github.io/word_cloud/auto_examples/simple.html#sphx-glr-auto-examples-simple-py) package.
@@ -437,7 +441,7 @@ visualize_word_counts(answer_word_counts_no_stopword)
 # - [`Doc`](https://spacy.io/api/doc): A container for accessing linguistic annotations like tokens, part-of-speech tags, named entities, and dependency parse information. It is created by the `nlp` function and represents a processed document.
 # - [`Token`](https://spacy.io/api/token): An object representing a single token in a `Doc` object. It contains information like the token text, part-of-speech tag, lemma, embedding, and much more.
 # 
-# When a text is processed by spaCy, it is first passed to the `nlp` function, which uses the loaded model to tokenize the text and applies various linguistic annotations like part-of-speech tagging, named entity recognition, and dependency parsing in the background. The resulting annotations are stored in a `Doc` object, which can be accessed and manipulated using various methods and attributes.
+# When a text is processed by spaCy, it is first passed to the `nlp` function, which uses the loaded model to tokenize the text and applies various linguistic annotations like lemmatization in the background. Notice that we add an additional `lowercase_text` function in the [utility file](#util) to the pipeline at the beginning to ensure that all tokens are in lowercase.
 
 # In[22]:
 
@@ -448,6 +452,17 @@ visualize_word_counts(answer_word_counts_no_stopword)
 # - https://spacy.io/usage/processing-pipelines
 nlp = spacy.load("en_core_web_sm", disable=["parser", "ner"])
 
+# Add at the beginning of the pipeline
+nlp.add_pipe("lowercase_text", first=True)
+
+print(nlp.pipe_names)
+
+
+# Now we can run the pipeline. The resulting annotations are stored in a `Doc` object, which can be accessed and manipulated using various methods and attributes.
+
+# In[23]:
+
+
 # Process the text using spaCy.
 doc = nlp(text)
 
@@ -457,7 +472,7 @@ print(doc)
 
 # The `Doc` object can be iterated over to access each `Token` object in the document. We can also directly access multiple attributes of the `Token` objects. For example, we can directly access the lemma of the token with `Token.lemma_` and check if a token is a stop word with `Token.is_stop`. To make it easy to see them, we put them in a data frame.
 
-# In[23]:
+# In[24]:
 
 
 spacy_doc_attributes = [(token, token.lemma_, token.is_stop) for token in doc]
@@ -466,7 +481,7 @@ pd.DataFrame(data=spacy_doc_attributes, columns=["token", "lemma", "is_stopword"
 
 # The above example only deals with one sentence. Now we need to deal with all the sentences in all the classes. We provide a `add_spacy_doc` function in the [utility file](#util) to add a column with a `Doc` representation of the `text` column to the dataframe. Now we can add the spaCy tokens using the above function. This step will take some time since it needs to process all the sentences. So we added a progress bar using the `tqdm` package.
 
-# In[24]:
+# In[25]:
 
 
 df_with_nltk_tokens_and_spacy_doc = add_spacy_doc(answer_df_with_tokens, nlp)
@@ -475,7 +490,7 @@ display(df_with_nltk_tokens_and_spacy_doc)
 
 # We also provide a `add_spacy_tokens` function in the [utility file](#util) to add the spacy tokens to our original dataframe. We can run the code below to add the spacy tokens.
 
-# In[25]:
+# In[26]:
 
 
 df_with_nltk_tokens_and_spacy_tokens = add_spacy_tokens(df_with_nltk_tokens_and_spacy_doc)
@@ -484,7 +499,7 @@ display(df_with_nltk_tokens_and_spacy_tokens)
 
 # Now we can use the function that we wrote before to get the word count from the spacy tokens.
 
-# In[26]:
+# In[27]:
 
 
 spacy_word_counts = answer_get_word_counts(df_with_nltk_tokens_and_spacy_tokens, token_col="spacy_tokens")
@@ -501,7 +516,7 @@ spacy_word_counts.groupby("class").head(n=5)
 # 
 # To use LDA, we need to represent the documents as a bag of words, where the order of the words is ignored and only the frequency of each word in the document is considered. This bag-of-words representation allows us to represent each document as a vector of word frequencies, which can be used as input to the LDA algorithm. Computing LDA might take a moment on our dataset size.
 
-# In[27]:
+# In[28]:
 
 
 # Convert preprocessed text to bag-of-words representation using CountVectorizer.
@@ -510,7 +525,7 @@ vectorizer = CountVectorizer(max_features=1000)
 
 # We will use the `fit_transform` function in the vectorizer. But in this case, we need a string that represents a sentence as the input. So, we can just join all the tokens together into one string. We also reset the index for consistency.
 
-# In[28]:
+# In[29]:
 
 
 df_strings = df_with_nltk_tokens_and_spacy_tokens["spacy_tokens"].apply(lambda x: " ".join(x))
@@ -520,7 +535,7 @@ df_strings
 
 # Then, we can use the `fit_transform` function to get the bag of words vector.
 
-# In[29]:
+# In[30]:
 
 
 X = vectorizer.fit_transform(df_strings.values)
@@ -528,7 +543,7 @@ X = vectorizer.fit_transform(df_strings.values)
 
 # We convert the original matrix to a data frame to make it easier to see the bag of words. The columns indicate tokens, and the values for each cell indicate the word counts. The number of columns in the data frame matches the `max_features` parameter in the `CountVectorizer`. The number of rows matches the size of the training data.
 
-# In[30]:
+# In[31]:
 
 
 pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names_out())
@@ -536,7 +551,7 @@ pd.DataFrame(X.toarray(), columns=vectorizer.get_feature_names_out())
 
 # Now we have the bag of words vector. We can use the vector for LDA topic modeling.
 
-# In[31]:
+# In[32]:
 
 
 # Define the number of topics to model with LDA.
@@ -550,7 +565,7 @@ f = lda.fit(X)
 
 # Now we can check the topic vectors in the LDA model. Each vector represents the topic in a high dimensional space. The high dimensional space is formed by using the word tokens. So, the vectors can also be viewed as weights that represents the number of importance that a word token was assigned to the topic. In the following code block, we print the shape of the vectors. The row size should match the number of topics that we set before. The column size should match the `max_features` parameter, which means the number of words.
 
-# In[32]:
+# In[33]:
 
 
 lda.components_.shape
@@ -566,8 +581,9 @@ lda.components_.shape
 # - Given a 1D NumPy array, return the indexes of the top `n` number of items according to their values. In other words, we want the indexes that can help us select the highest `n` values. For example, for `n=3` in array `[3,1,2,4,0]`, the function should return `[3,0,2]`, because the highest value is `4` with index `3` in the original array, and so on.
 #   - Hint: use the `numpy.argsort` function.
 # - Notice that the `numpy.argsort` function gives you the indexes from the array items with the lowest value, which is not what we want. You need to figure out a way to reverse a numpy array and select the top `n` items.
+# - Note that, technically, to retrieve the top `n` items, we can implement this function without using `numpy.argsort`. But for this task, we want you to practice using the `numpy.argsort` function. An alternative (and more efficient in terms of time complexity) approach is to use a [min-heap](https://www.geeksforgeeks.org/python/min-heap-in-python/) data structure to track the current top `n` items and replace them if there are items with larger values. You can implement a min-heap as an optional challenge.
 
-# In[33]:
+# In[34]:
 
 
 def get_index_of_top_n_items(array, n):
@@ -594,7 +610,7 @@ def get_index_of_top_n_items(array, n):
 
 # The following code shows the example that we mentioned above.
 
-# In[34]:
+# In[35]:
 
 
 A = np.array([3,1,2,4,0])
@@ -604,7 +620,7 @@ answer_top_n_for_A
 
 # The code below tests if the output of your function matches the expected output.
 
-# In[35]:
+# In[36]:
 
 
 B = lda.components_[0]
@@ -615,7 +631,7 @@ check_answer_np(top_n_for_topic_0, answer_top_n_for_topic_0)
 
 # We can now use the function that we just implemented in the following function to help us get the weights for the top `n` words for each topic.
 
-# In[36]:
+# In[37]:
 
 
 def get_word_weights_for_topics(lda_model, vectorizer, n=100):
@@ -653,7 +669,7 @@ def get_word_weights_for_topics(lda_model, vectorizer, n=100):
 
 # Now we can take a look at the data first. For simplicity, we only print the first 10 important words for each topic.
 
-# In[37]:
+# In[38]:
 
 
 topic_word_weights = get_word_weights_for_topics(lda, vectorizer, n=100)
@@ -665,7 +681,7 @@ for k, v in topic_word_weights.items():
 
 # Then, we can use the word weights to create word clouds.
 
-# In[38]:
+# In[39]:
 
 
 # Generate a word cloud for each topic.
@@ -704,7 +720,7 @@ for topic_idx, words in topic_word_weights.items():
 # 
 # We can train a Word2Vec model ourselves, but keep in mind that later on, it's not nice if we don't have embeddings for certain words in the test set. So let's first apply the familiar preprocessing steps to the test set:
 
-# In[39]:
+# In[40]:
 
 
 # Reformat the test set.
@@ -721,7 +737,7 @@ display(df_test_with_nltk_tokens_and_spacy_tokens)
 
 # To obtain the complete model, we combine the `tokens` column into one series and call the `Word2Vec` function.
 
-# In[40]:
+# In[41]:
 
 
 # Rename the very long variables
@@ -737,7 +753,7 @@ w2v_model = Word2Vec(tokens_both.values, vector_size=40, min_count=1)
 
 # To obtain the embeddings, we can use the `Word2Vec.wv[word]` syntax. To get multiple vectors nicely next to each other in a 2D matrix, we can call `numpy.vstack`.
 
-# In[41]:
+# In[42]:
 
 
 print(np.vstack([w2v_model.wv[word] for word in ["rain", "cat", "dog"]]))
@@ -745,7 +761,7 @@ print(np.vstack([w2v_model.wv[word] for word in ["rain", "cat", "dog"]]))
 
 # The spaCy model we used has a `Tok2Vec` algorithm in its pipeline, so we can directly access the 2D matrix of all word vectors on a document with the `Doc.tensor` attribute. Keep in mind this still contains the embeddings of the stopwords.
 
-# In[42]:
+# In[43]:
 
 
 print(doc.tensor)
@@ -753,7 +769,7 @@ print(doc.tensor)
 
 # To prepare the word embeddings for classification, we will add a `tensor` column to both the dataframes for training and testing. Each cell in the `tensor` column should be a tensor array, representing the word embedding vector for the text in the corresponding row. The tensors need to have the same size for both the training and test sets, so we also need to pad the tensors with smaller sizes by adding zeros at the end. We provide a `add_padded_tensors` function in the [utility file](#util) for doing this.
 
-# In[43]:
+# In[44]:
 
 
 df_train_with_tensor, df_test_with_tensor = add_padded_tensors(df_train_preprocessd, df_test_preprocessd)
@@ -768,7 +784,7 @@ display(df_test_with_tensor)
 # 
 # The following code demonstrates how to implement a neural network for topic classification in PyTorch. First let's do some more preparations for our inputs, turning them into PyTorch tensors.
 
-# In[44]:
+# In[45]:
 
 
 # Transform spaCy tensors into PyTorch tensors.
@@ -786,7 +802,7 @@ train_target = train_target.scatter_(1, train_labels.unsqueeze(1), 1).unsqueeze(
 
 # Then, it is time to define our network. The neural net consists of three fully connected layers (`fc1`, `fc2`, and `fc3`) with ReLU activation (`relu`) in between each layer. We flatten the input tensor using `view` before passing it through the fully connected layers. Finally, we apply the softmax activation function (`softmax`) to the output tensor to obtain the predicted probabilities for each class.
 
-# In[45]:
+# In[46]:
 
 
 class TopicClassifier(nn.Module):
@@ -822,7 +838,7 @@ class TopicClassifier(nn.Module):
 # Now it's time to train our network, this may take a while, but the current loss will be printed after every epoch.
 # If you want to run the code faster, you can also put this notebook on Google Colab and use its provided GPU to speed up computing.
 
-# In[46]:
+# In[47]:
 
 
 # Define parameters.
@@ -853,7 +869,7 @@ for epoch in range(num_epochs):
 
 # The following code evaluates the model using a confusion matrix.
 
-# In[47]:
+# In[48]:
 
 
 # Evaluate the neural net on the test set.
