@@ -5,9 +5,13 @@ from xml.sax import saxutils as su
 import matplotlib.pyplot as plt
 from tqdm.notebook import tqdm
 from wordcloud import WordCloud
+from spacy.lang.en.stop_words import STOP_WORDS
+from spacy.tokens import Doc
+from spacy.language import Language
 
 # Add tqdm functions to pandas.
 tqdm.pandas()
+
 
 def check_answer_df(df_result, df_answer, n=1):
     """
@@ -142,6 +146,12 @@ def visualize_word_counts(df, class_col="class", token_col="tokens", count_col="
         plt.show()
 
 
+@Language.component("lowercase_text")
+def lowercase_text(doc):
+    # Create a new Doc with the lowercase text, using the same Vocab
+    return Doc(doc.vocab, words=[t.text.lower() for t in doc])
+    
+
 def add_spacy_doc(df, nlp):
     """
     Add a column with the spaCy Doc objects.
@@ -177,7 +187,7 @@ def add_spacy_tokens(df):
     Parameters
     ----------
     df : pandas.DataFrame
-        The dataframe containing at least the "doc" column.
+        The dataframe containing at least the "doc" column (spaCy Doc objects).
 
     Returns
     -------
@@ -187,9 +197,10 @@ def add_spacy_tokens(df):
     # Copy the dataframe to avoid editing the original one.
     df = df.copy(deep=True)
 
-    df["spacy_tokens"] = df["doc"].apply(
-        lambda tokens: [token.lemma_ for token in tokens if token.is_alpha and not token.is_stop]
-    )
+    df["spacy_tokens"] = [
+        [t.lemma_ for t in doc if t.is_alpha and t.lemma_.lower() not in STOP_WORDS]
+        for doc in df["doc"]
+    ]
 
     return df
 
